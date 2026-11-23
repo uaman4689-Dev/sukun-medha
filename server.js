@@ -4,7 +4,7 @@ const app=express(),PORT=process.env.PORT||10000,multer=require('multer'),pdfPar
 const {DATABASE_URL,JWT_SECRET,ADMIN_PASSWORD}=process.env;
 if(!DATABASE_URL||!JWT_SECRET||!ADMIN_PASSWORD){console.error('Set DATABASE_URL, JWT_SECRET and ADMIN_PASSWORD');process.exit(1);}
 const pool=new Pool({connectionString:DATABASE_URL,ssl:process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined,max:8});
-app.set('trust proxy',1);app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'5mb'}));
+app.set('trust proxy',1);app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'20mb'}));
 app.use('/api/auth',rateLimit({windowMs:900000,limit:30,standardHeaders:true,legacyHeaders:false}));
 app.use('/api/admin/login',rateLimit({windowMs:900000,limit:10,standardHeaders:true,legacyHeaders:false}));
 const defaults={ads:[],winners:[],competitions:[],notices:[],settings:{brand:'SUKUN MEDHA',dailyQuizCoins:5,referralCoins:10}};
