@@ -105,3 +105,9 @@ CREATE TABLE IF NOT EXISTS member_entitlements(
 CREATE INDEX IF NOT EXISTS idx_cart_member ON member_cart_items(member_id);
 CREATE INDEX IF NOT EXISTS idx_shop_orders_member ON shop_orders(member_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_entitlements_member ON member_entitlements(member_id,item_type,item_id,expires_at);
+
+CREATE TABLE IF NOT EXISTS member_rewards(
+ id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id),reward_title TEXT NOT NULL,
+ description TEXT,competition_id TEXT,status TEXT NOT NULL DEFAULT 'Awarded',awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_member_rewards_member ON member_rewards(member_id,awarded_at DESC);
