@@ -6,7 +6,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const safeUrl=s=>{try{const u=new URL(s,location.href);return ['http:','https:'].includes(u.protocol)?u.href:'#'}catch{return '#'}};
 function renderCollection(id,items,type){
  const host=document.getElementById(id);if(!host)return;
- const seen=new Map();(items||[]).forEach((x,i)=>{const key=type==='course'?String(x.title||x.name||x.id||i).trim().toLocaleLowerCase('bn').replace(/\\s+/g,' '):String(x.id||x.title||i);seen.set(key,x)});const unique=[...seen.values()];
+ const seenIds=new Set(),seenTitles=new Set(),unique=[];(items||[]).forEach(x=>{if(type!=='course'){unique.push(x);return}const id=String(x.id||'').trim(),title=String(x.title||x.name||'').trim().toLocaleLowerCase('bn').replace(/\s+/g,' ');if((id&&seenIds.has(id))||(title&&seenTitles.has(title)))return;if(id)seenIds.add(id);if(title)seenTitles.add(title);unique.push(x)});
  if(!unique.length){host.innerHTML='<div class="content-empty">নতুন আয়োজন শিগগিরই আসছে।</div>';return;}
  host.innerHTML=unique.slice(-6).reverse().map(x=>{
   const freeCourse=type==='course'&&(x.accessType==='free'||(!x.accessType&&Number(x.price||0)===0&&Number(x.coinPrice||0)===0));
