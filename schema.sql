@@ -111,3 +111,10 @@ CREATE TABLE IF NOT EXISTS member_rewards(
  description TEXT,competition_id TEXT,status TEXT NOT NULL DEFAULT 'Awarded',awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_member_rewards_member ON member_rewards(member_id,awarded_at DESC);
+
+CREATE TABLE IF NOT EXISTS event_entries(
+ id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id),event_type TEXT NOT NULL CHECK(event_type IN ('competition','challenge')),
+ event_id TEXT NOT NULL,order_id BIGINT REFERENCES shop_orders(id),status TEXT NOT NULL DEFAULT 'Confirmed',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(member_id,event_type,event_id)
+);
+CREATE INDEX IF NOT EXISTS idx_event_entries_event ON event_entries(event_type,event_id,created_at DESC);
