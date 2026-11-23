@@ -1,8 +1,17 @@
 'use strict';
 const crypto=require('crypto');
+const DEFAULT_DESIGN={main:'#145b3c',gold:'#c59b45',watermark:'SUKUN MEDHA',border:'double',footer:'LEARN · COMPETE · ACHIEVE'};
 module.exports=function mountCertificates(app,pool,{member,admin}){
  const fail=(res,e)=>{console.error('Certificate API:',e);res.status(500).json({error:'সার্ভারে সমস্যা হয়েছে।'});};
  const serial=()=> 'SM-'+new Date().getFullYear()+'-'+crypto.randomBytes(4).toString('hex').toUpperCase();
+ const getDesign=async()=>{const r=await pool.query("SELECT data->'certificateDesign' AS design FROM platform_state WHERE id=1");return {...DEFAULT_DESIGN,...(r.rows[0]?.design||{})};};
+ app.get('/api/certificate-design',async(req,res)=>{try{res.json(await getDesign())}catch(e){fail(res,e)}});
+ app.put('/api/admin/certificate-design',admin,async(req,res)=>{try{
+  const b=req.body||{},hex=/^#[0-9a-fA-F]{6}$/;
+  const design={main:hex.test(b.main)?b.main:'#145b3c',gold:hex.test(b.gold)?b.gold:'#c59b45',watermark:String(b.watermark||'SUKUN MEDHA').slice(0,100),border:['double','ornate','simple'].includes(b.border)?b.border:'double',footer:String(b.footer||'').slice(0,180)};
+  await pool.query("UPDATE platform_state SET data=jsonb_set(data,'{certificateDesign}',$1::jsonb,true),updated_at=NOW() WHERE id=1",[JSON.stringify(design)]);
+  res.json({ok:true,design});
+ }catch(e){fail(res,e)}});
  app.get('/api/me/certificates',member,async(req,res)=>{try{const r=await pool.query('SELECT id,serial,recipient_name,exam_title,achievement,score,grade,issue_date,created_at FROM certificate_records WHERE member_id=$1 AND status=$2 ORDER BY created_at DESC',[req.user.id,'Issued']);res.json(r.rows)}catch(e){fail(res,e)}});
  app.get('/api/certificates/:serial',async(req,res)=>{try{const r=await pool.query("SELECT serial,recipient_name,exam_title,achievement,score,grade,issue_date,issuer_name,issuer_title,organization,status FROM certificate_records WHERE upper(serial)=upper($1)",[req.params.serial]);if(!r.rowCount)return res.status(404).json({error:'Certificate পাওয়া যায়নি।'});res.json(r.rows[0])}catch(e){fail(res,e)}});
  app.get('/api/admin/certificates',admin,async(req,res)=>{try{const r=await pool.query('SELECT id,serial,recipient_name,recipient_phone,recipient_email,exam_title,achievement,score,grade,issue_date,issuer_name,issuer_title,status,created_at FROM certificate_records ORDER BY created_at DESC LIMIT 500');res.json(r.rows)}catch(e){fail(res,e)}});
