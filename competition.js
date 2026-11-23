@@ -1,30 +1,15 @@
 (()=>{'use strict';
-const $=s=>document.querySelector(s);
-const id=new URLSearchParams(location.search).get('id');
-const token=localStorage.getItem('sm_member_token');
-const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-async function init(){
- const pub=await fetch('/api/public').then(r=>r.json());
- const competition=(pub.competitions||[]).find(x=>String(x.id)===String(id));
- if(!competition)throw Error('Competition পাওয়া যায়নি।');
- $('#title').textContent=competition.title;
- $('#description').textContent=competition.description||'';
- $('#fee').textContent='Entry Fee: ৳ '+Number(competition.fee||0)+' · '+Number(competition.coinPrice||0)+' Coins';
- const resultResponse=await fetch('/api/competitions/'+encodeURIComponent(id)+'/results');
- const resultData=await resultResponse.json();
- if(!resultResponse.ok)throw Error(resultData.error||'Result load failed');
- if((resultData.results||[]).length){
-  $('#results').innerHTML='<table class="result-table"><thead><tr><th>Rank</th><th>Roll</th><th>Name</th><th>Score</th><th>Award</th></tr></thead><tbody>'+resultData.results.map(x=>'<tr><td>'+esc(x.rank)+'</td><td>'+esc(x.roll)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.score)+'</td><td>'+esc(x.award)+'</td></tr>').join('')+'</tbody></table>';
- }else{$('#results').textContent=resultData.resultStatus==='Published'?'ফলাফল প্রকাশিত হয়েছে।':'এখনো ফলাফল প্রকাশ করা হয়নি।';}
- $('#showQuestions').onclick=async()=>{
-  if(!token){location.href='/member.html';return;}
-  try{
-   const join=await fetch('/api/competitions/'+encodeURIComponent(id)+'/join',{method:'POST',headers:{Authorization:'Bearer '+token}});const joined=await join.json();if(!join.ok)throw Error(joined.error||'Entry failed');const response=await fetch('/api/competitions/'+encodeURIComponent(id)+'/questions',{headers:{Authorization:'Bearer '+token}});
-   const data=await response.json();
-   if(!response.ok)throw Error(data.error||'প্রশ্ন দেখার Access নেই।');
-   $('#questions').innerHTML=(data.questions||[]).map((q,i)=>'<article class="q"><b>'+(i+1)+'. '+esc(q.text)+'</b><p>'+esc(q.type)+' · '+esc(q.marks)+' Marks</p>'+(q.options||[]).map(o=>'<div>• '+esc(o)+'</div>').join('')+'</article>').join('')||'প্রশ্ন এখনো প্রকাশিত হয়নি।';
-  }catch(e){$('#questions').textContent=e.message;}
- };
-}
-init().catch(e=>$('#results').textContent=e.message);
+const $=s=>document.querySelector(s),id=new URLSearchParams(location.search).get('id'),token=localStorage.getItem('sm_member_token');let attempt=null,questions=[],answers={},timer=null,deadline=0,submitting=false,saveTimer=null;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const auth={'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})};
+async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{...auth,...(opts.headers||{})}}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Request failed');return d}
+function renderQuestions(){const host=$('#questionHost');host.innerHTML=questions.map((q,i)=>{const key=q.id||('q'+(i+1)),v=answers[key]??'',type=q.type||'MCQ';let input='';if(type==='MCQ')input=(q.options||[]).map((o,j)=>'<label class="option"><input type="radio" name="'+esc(key)+'" value="'+esc(o)+'" '+(v===o?'checked':'')+'><span>'+String.fromCharCode(65+j)+'. '+esc(o)+'</span></label>').join('');else if(type==='True / False')input=['True','False'].map(o=>'<label class="option"><input type="radio" name="'+esc(key)+'" value="'+o+'" '+(v===o?'checked':'')+'><span>'+(o==='True'?'সত্য':'মিথ্যা')+'</span></label>').join('');else input='<textarea class="answer" rows="3" data-answer="'+esc(key)+'" placeholder="আপনার উত্তর লিখুন">'+esc(v)+'</textarea>';return '<article class="q"><b>'+(i+1)+'. '+esc(q.text)+'</b><p class="muted">'+esc(type)+' · '+Number(q.marks||1)+' নম্বর</p>'+input+'</article>'}).join('')}
+function saveSoon(){if(!attempt||submitting)return;clearTimeout(saveTimer);$('#saveState').textContent='উত্তর সংরক্ষণ হচ্ছে…';saveTimer=setTimeout(async()=>{try{await api('/api/online-exams/attempts/'+attempt.id+'/answers',{method:'PUT',body:JSON.stringify({answers})});$('#saveState').textContent='উত্তর সংরক্ষিত ✓'}catch(e){$('#saveState').textContent=e.message}},250)}
+function showResult(r){clearInterval(timer);$('#examArea').classList.add('hidden');$('#examResult').classList.remove('hidden');const pending=r.status==='Pending Evaluation';$('#examResult').innerHTML='<h3>'+(pending?'পরীক্ষা জমা হয়েছে — Written মূল্যায়ন বাকি':'পরীক্ষা সম্পন্ন')+'</h3><p>MCQ/Objective: <b>'+Number(r.objectiveScore||0)+'</b></p><p>Written: <b>'+(pending?'মূল্যায়নাধীন':Number(r.writtenScore||0)+' / '+Number(r.writtenMax||0))+'</b></p><p>মোট নম্বর: <b>'+(pending?'মূল্যায়নের পর প্রকাশ হবে':Number(r.totalScore||0))+'</b></p>'}
+async function submit(auto=false){if(submitting||!attempt)return;submitting=true;clearTimeout(saveTimer);$('#submitExam').disabled=true;$('#examMsg').textContent=auto?'সময় শেষ — পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে…':'পরীক্ষা জমা হচ্ছে…';try{const d=await api('/api/online-exams/attempts/'+attempt.id+'/submit',{method:'POST',body:JSON.stringify({answers})});showResult(d.result)}catch(e){$('#examMsg').textContent=e.message;submitting=false;$('#submitExam').disabled=false}}
+function startTimer(){deadline=new Date(attempt.expiresAt).getTime();const tick=()=>{const left=Math.max(0,Math.ceil((deadline-Date.now())/1000));$('#timer').textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');$('#timer').classList.toggle('warn',left<=300);if(left<=0)submit(true)};tick();timer=setInterval(tick,500)}
+async function init(){if(!id)throw Error('Competition ID পাওয়া যায়নি।');const pub=await fetch('/api/public').then(r=>r.json()),comp=(pub.competitions||[]).find(x=>String(x.id)===String(id));if(!comp)throw Error('Competition পাওয়া যায়নি।');$('#title').textContent=comp.title;$('#description').textContent=comp.description||'';$('#fee').textContent='Entry Fee: ৳ '+Number(comp.fee||0)+' · '+Number(comp.coinPrice||0)+' Coins';const rr=await fetch('/api/competitions/'+encodeURIComponent(id)+'/results').then(r=>r.json());$('#results').textContent=rr.resultStatus==='Published'?'ফলাফল প্রকাশিত হয়েছে।': 'এখনো ফলাফল প্রকাশ করা হয়নি।';if((rr.results||[]).length)$('#results').innerHTML='<table class="result-table"><tr><th>Rank</th><th>Roll</th><th>Name</th><th>Score</th><th>Award</th></tr>'+rr.results.map(x=>'<tr><td>'+esc(x.rank)+'</td><td>'+esc(x.roll)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.score)+'</td><td>'+esc(x.award)+'</td></tr>').join('')+'</table>'}
+$('#startExam').onclick=async()=>{if(!token){location.href='/member.html';return}try{const join=await api('/api/competitions/'+encodeURIComponent(id)+'/join',{method:'POST'});const d=await api('/api/online-exams/'+encodeURIComponent(id)+'/start',{method:'POST'});attempt=d.attempt;questions=d.questions||[];answers=d.answers||{};$('#intro').classList.add('hidden');$('#examArea').classList.remove('hidden');if(d.result){showResult(d.result);return}renderQuestions();startTimer()}catch(e){$('#examMsg').textContent=e.message}};
+$('#examForm').addEventListener('change',e=>{const t=e.target;if(t.matches('input[type=radio]'))answers[t.name]=t.value;saveSoon()});$('#examForm').addEventListener('input',e=>{const t=e.target;if(t.matches('[data-answer]'))answers[t.dataset.answer]=t.value;saveSoon()});$('#examForm').onsubmit=e=>{e.preventDefault();if(confirm('আপনি কি নিশ্চিতভাবে পরীক্ষা জমা দিতে চান?'))submit(false)};
+init().catch(e=>$('#examMsg').textContent=e.message);
 })();
