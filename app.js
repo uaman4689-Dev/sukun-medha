@@ -6,7 +6,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const safeUrl=s=>{try{const u=new URL(s,location.href);return ['http:','https:'].includes(u.protocol)?u.href:'#'}catch{return '#'}};
 function renderCollection(id,items,type){
  const host=document.getElementById(id);if(!host)return;
- const unique=[...new Map((items||[]).map((x,i)=>[String(x.id||x.title||i),x])).values()];
+ const seen=new Map();(items||[]).forEach((x,i)=>{const key=type==='course'?String(x.title||x.name||x.id||i).trim().toLocaleLowerCase('bn').replace(/\\s+/g,' '):String(x.id||x.title||i);seen.set(key,x)});const unique=[...seen.values()];
  if(!unique.length){host.innerHTML='<div class="content-empty">নতুন আয়োজন শিগগিরই আসছে।</div>';return;}
  host.innerHTML=unique.slice(-6).reverse().map(x=>{
   const freeCourse=type==='course'&&(x.accessType==='free'||(!x.accessType&&Number(x.price||0)===0&&Number(x.coinPrice||0)===0));
@@ -30,13 +30,13 @@ function renderCollection(id,items,type){
 document.addEventListener('click',async e=>{
  const buy=e.target.closest('[data-buy-now]');
  const b=buy||e.target.closest('[data-add-type]');if(!b)return;
- const token=localStorage.getItem('sm_member_token');if(!token){location.href='/member.html';return;}
+ const token=localStorage.getItem('sm_member_token');if(!token){location.href='/buy?type='+encodeURIComponent(buy?buy.dataset.buyNow:b.dataset.addType)+'&id='+encodeURIComponent(buy?buy.dataset.buyId:b.dataset.addId)+'&action='+(buy?'buy':'cart');return;}
  b.disabled=true;
  try{
   const type=buy?buy.dataset.buyNow:b.dataset.addType,id=buy?buy.dataset.buyId:b.dataset.addId;
   const r=await fetch('/api/cart',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({type,id})});
   const d=await r.json();if(!r.ok)throw Error(d.error||'Cart error');
-  if(buy){location.href='/cart';return;}
+  if(buy){location.href='/cart?buyNow=1';return;}
   b.textContent='Cart-এ যোগ হয়েছে ✓';
  }catch(x){alert(x.message);b.disabled=false;}
 });
