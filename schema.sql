@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS members(id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 CREATE TABLE IF NOT EXISTS referrals(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),referrer_id UUID NOT NULL REFERENCES members(id),referred_id UUID NOT NULL UNIQUE REFERENCES members(id),status TEXT NOT NULL DEFAULT 'Pending',reward INTEGER NOT NULL DEFAULT 0,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),rewarded_at TIMESTAMPTZ);
 CREATE TABLE IF NOT EXISTS coin_transactions(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),member_id UUID NOT NULL REFERENCES members(id),amount INTEGER NOT NULL,reason TEXT NOT NULL,reference_id TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS quiz_attempts(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),member_id UUID NOT NULL REFERENCES members(id),questions JSONB NOT NULL,completed_at TIMESTAMPTZ,quiz_day DATE NOT NULL DEFAULT CURRENT_DATE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(member_id,quiz_day));
+ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_coin_member_created ON coin_transactions(member_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id,created_at DESC);
 
