@@ -37,7 +37,7 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
   }catch(e){bad(res,e)}});
   app.post('/api/admin/packages',admin,async(req,res)=>{try{
     const {id,name,description,kind,durationDays,price,offerPrice,features,targetType,targetId,active,sortOrder}=req.body||{};
-    if(!name||!['monthly','yearly','custom','exam','competition','book','course'].includes(kind)||!Number.isInteger(Number(durationDays))||Number(durationDays)<1||Number(durationDays)>3650||!Number.isFinite(Number(price))||Number(price)<0||(offerPrice!==''&&offerPrice!=null&&(!Number.isFinite(Number(offerPrice))||Number(offerPrice)<0||Number(offerPrice)>Number(price))))
+    if(!name||!['monthly','yearly','custom','exam','competition','book','course'].includes(kind)||!Number.isInteger(Number(durationDays))||Number(durationDays)<1||Number(durationDays)>3650||(kind==='monthly'&&Number(durationDays)!==30)||(kind==='yearly'&&Number(durationDays)!==365)||!Number.isFinite(Number(price))||Number(price)<0||(offerPrice!==''&&offerPrice!=null&&(!Number.isFinite(Number(offerPrice))||Number(offerPrice)<0||Number(offerPrice)>Number(price))))
       return res.status(400).json({error:'প্যাকেজের নাম, ধরন, মেয়াদ ও সঠিক মূল্য দিন।'});
     if(['exam','competition','book','course'].includes(kind)&&!targetId)return res.status(400).json({error:'এই প্যাকেজের জন্য নির্দিষ্ট Exam/Competition/Book/Course ID প্রয়োজন।'});
     const v=[String(name).slice(0,120),String(description||'').slice(0,1000),kind,Number(durationDays),Number(price),offerPrice===''||offerPrice==null?null:Number(offerPrice),JSON.stringify(Array.isArray(features)?features:[]),targetType||kind,targetId||null,active!==false,Number(sortOrder)||0];
