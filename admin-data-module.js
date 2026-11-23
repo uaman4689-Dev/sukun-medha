@@ -1,0 +1,29 @@
+'use strict';
+module.exports=function mountAdminData(app,pool,{admin}){
+ const fail=(res,e)=>{console.error('Admin data:',e);res.status(500).json({error:'ডেটা ব্যবস্থাপনায় সমস্যা হয়েছে।'})};
+ app.delete('/api/admin/members/:id',admin,async(req,res)=>{const c=await pool.connect();try{await c.query('BEGIN');const m=await c.query('SELECT id,name FROM members WHERE id=$1 FOR UPDATE',[req.params.id]);if(!m.rowCount){await c.query('ROLLBACK');return res.sendStatus(404)}
+ const id=m.rows[0].id;
+ await c.query('DELETE FROM coin_task_submissions WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM coin_competition_shares WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM coin_streak_claims WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM referrals WHERE referrer_id=$1 OR referred_id=$1',[id]);
+ await c.query('DELETE FROM coin_transactions WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM quiz_attempts WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM coin_cashout_requests WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM member_subscriptions WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM payment_requests WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM shop_order_payments WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM member_entitlements WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM event_entries WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM member_rewards WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM online_exam_attempts WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM shop_orders WHERE member_id=$1',[id]);
+ await c.query('DELETE FROM members WHERE id=$1',[id]);
+ await c.query('COMMIT');res.json({ok:true,deletedMember:id,name:m.rows[0].name});
+ }catch(e){await c.query('ROLLBACK');fail(res,e)}finally{c.release()}});
+ app.delete('/api/admin/orders/:id',admin,async(req,res)=>{const c=await pool.connect();try{await c.query('BEGIN');const o=await c.query('SELECT id FROM shop_orders WHERE id=$1 FOR UPDATE',[req.params.id]);if(!o.rowCount){await c.query('ROLLBACK');return res.sendStatus(404)}await c.query('DELETE FROM event_entries WHERE order_id=$1',[req.params.id]);await c.query('DELETE FROM member_entitlements WHERE order_id=$1',[req.params.id]);await c.query('DELETE FROM shop_order_payments WHERE order_id=$1',[req.params.id]);await c.query('DELETE FROM shop_order_items WHERE order_id=$1',[req.params.id]);await c.query('DELETE FROM shop_orders WHERE id=$1',[req.params.id]);await c.query('COMMIT');res.json({ok:true})}catch(e){await c.query('ROLLBACK');fail(res,e)}finally{c.release()}});
+ app.delete('/api/admin/competitions/:id',admin,async(req,res)=>{const c=await pool.connect();try{await c.query('BEGIN');const state=await c.query('SELECT data FROM platform_state WHERE id=1 FOR UPDATE');const list=state.rows[0]?.data?.competitions||[],exists=list.some(x=>String(x.id)===String(req.params.id));if(!exists){await c.query('ROLLBACK');return res.sendStatus(404)}const next=list.filter(x=>String(x.id)!==String(req.params.id));await c.query("UPDATE platform_state SET data=jsonb_set(data,'{competitions}',$1::jsonb,true),updated_at=NOW() WHERE id=1",[JSON.stringify(next)]);await c.query("DELETE FROM event_entries WHERE event_type='competition' AND event_id=$1",[String(req.params.id)]);await c.query("DELETE FROM online_exam_attempts WHERE competition_id=$1",[String(req.params.id)]);await c.query("DELETE FROM member_entitlements WHERE item_type='competition' AND item_id=$1",[String(req.params.id)]);await c.query("DELETE FROM member_cart_items WHERE item_type='competition' AND item_id=$1",[String(req.params.id)]);await c.query('COMMIT');res.json({ok:true})}catch(e){await c.query('ROLLBACK');fail(res,e)}finally{c.release()}});
+ app.delete('/api/admin/entries/:id',admin,async(req,res)=>{try{const r=await pool.query('DELETE FROM event_entries WHERE id=$1 RETURNING id',[req.params.id]);if(!r.rowCount)return res.sendStatus(404);res.json({ok:true})}catch(e){fail(res,e)}});
+ app.delete('/api/admin/online-exams/attempts/:id',admin,async(req,res)=>{try{const r=await pool.query('DELETE FROM online_exam_attempts WHERE id=$1 RETURNING id',[req.params.id]);if(!r.rowCount)return res.sendStatus(404);res.json({ok:true})}catch(e){fail(res,e)}});
+ app.get('/api/admin/print-data',admin,async(req,res)=>{try{const [st,m,o,e,a,p,c]=await Promise.all([pool.query('SELECT data FROM platform_state WHERE id=1'),pool.query('SELECT id,name,phone,email,role,occupation,coin_balance,status,created_at FROM members ORDER BY created_at DESC LIMIT 2000'),pool.query('SELECT o.*,m.name member_name,m.phone FROM shop_orders o JOIN members m ON m.id=o.member_id ORDER BY o.created_at DESC LIMIT 2000'),pool.query('SELECT e.*,m.name member_name,m.phone FROM event_entries e JOIN members m ON m.id=e.member_id ORDER BY e.created_at DESC LIMIT 3000'),pool.query('SELECT a.id,a.competition_id,a.attempt_no,a.status,a.objective_score,a.written_score,a.started_at,m.name member_name,m.phone FROM online_exam_attempts a JOIN members m ON m.id=a.member_id ORDER BY a.started_at DESC LIMIT 3000'),pool.query('SELECT r.*,m.name member_name,m.phone FROM coin_cashout_requests r JOIN members m ON m.id=r.member_id ORDER BY r.created_at DESC LIMIT 2000'),pool.query('SELECT serial,recipient_name,exam_title,achievement,status,issue_date,created_at FROM certificate_records ORDER BY created_at DESC LIMIT 2000')]);res.json({generatedAt:new Date().toISOString(),platform:st.rows[0]?.data||{},members:m.rows,orders:o.rows,participants:e.rows,examAttempts:a.rows,cashouts:p.rows,certificates:c.rows})}catch(e){fail(res,e)}});
+};
