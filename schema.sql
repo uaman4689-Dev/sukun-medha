@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS shop_orders(
  payment_method TEXT,payment_status TEXT NOT NULL DEFAULT 'Pending',order_status TEXT NOT NULL DEFAULT 'Pending',
  coupon_code TEXT,admin_note TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),reviewed_at TIMESTAMPTZ
 );
+ALTER TABLE shop_orders ADD COLUMN IF NOT EXISTS applied_offer_id BIGINT REFERENCES payment_offers(id);
 CREATE TABLE IF NOT EXISTS shop_order_items(
  id BIGSERIAL PRIMARY KEY,order_id BIGINT NOT NULL REFERENCES shop_orders(id) ON DELETE CASCADE,
  item_type TEXT NOT NULL,item_id TEXT NOT NULL,title TEXT NOT NULL,quantity INTEGER NOT NULL,
