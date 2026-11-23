@@ -13,15 +13,17 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
     res.json({payments:r.rows,subscriptions:a.rows});
   }catch(e){bad(res,e)}});
   app.post('/api/me/payments',member,async(req,res)=>{try{
-    const {packageId,method,transactionId,payerPhone,amount,note}=req.body||{};
+    const {packageId,method,transactionId,payerPhone,amount,note,offerCode}=req.body||{};
     if(!packageId||!['bKash','Nagad','Rocket','Bank'].includes(method)||!transactionId||!payerPhone)
       return res.status(400).json({error:'প্যাকেজ, পেমেন্ট মাধ্যম, Transaction ID ও প্রেরকের নম্বর দিন।'});
     const p=await pool.query('SELECT * FROM payment_packages WHERE id=$1 AND active=true',[packageId]);
     if(!p.rowCount)return res.status(404).json({error:'প্যাকেজটি বর্তমানে পাওয়া যাচ্ছে না।'});
-    const price=Number(p.rows[0].offer_price??p.rows[0].price);
+    let price=Number(p.rows[0].offer_price??p.rows[0].price);
+    const code=String(offerCode||'').trim().toUpperCase();
+    if(code){const o=await pool.query("SELECT * FROM payment_offers WHERE upper(code)=upper($1) AND active=true AND (starts_at IS NULL OR starts_at<=NOW()) AND (ends_at IS NULL OR ends_at>=NOW()) ORDER BY id DESC LIMIT 1",[code]);if(!o.rowCount)return res.status(400).json({error:'Coupon code সঠিক নয় অথবা মেয়াদ শেষ।'});const offer=o.rows[0];price=offer.discount_type==='percent'?price*(1-Number(offer.discount_value)/100):price-Number(offer.discount_value);price=Math.max(0,Math.round(price*100)/100);}
     const submitted=Number(amount);
-    if(!Number.isFinite(submitted)||submitted!==price)return res.status(400).json({error:'প্যাকেজের নির্ধারিত পরিমাণ সঠিকভাবে দিন।'});
-    const r=await pool.query('INSERT INTO payment_requests(member_id,package_id,method,transaction_id,payer_phone,amount,note) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,status,created_at',[req.user.id,packageId,method,String(transactionId).trim(),String(payerPhone).trim(),price,String(note||'').slice(0,500)]);
+    if(!Number.isFinite(submitted)||submitted!==price)return res.status(400).json({error:'Coupon প্রয়োগের পর সঠিক পরিমাণ ৳'+price+' দিন।'});
+    const r=await pool.query('INSERT INTO payment_requests(member_id,package_id,method,transaction_id,payer_phone,amount,note,offer_code) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,status,created_at',[req.user.id,packageId,method,String(transactionId).trim(),String(payerPhone).trim(),price,String(note||'').slice(0,500),code||null]);
     res.status(201).json({ok:true,payment:r.rows[0],message:'পেমেন্ট তথ্য জমা হয়েছে। Admin যাচাইয়ের পর Access চালু হবে।'});
   }catch(e){if(e.code==='23505')return res.status(409).json({error:'এই Transaction ID আগে জমা হয়েছে।'});bad(res,e)}});
   app.get('/api/admin/payments',admin,async(req,res)=>{try{
