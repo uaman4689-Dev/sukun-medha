@@ -181,6 +181,7 @@ CREATE INDEX IF NOT EXISTS idx_coin_task_submissions_status ON coin_task_submiss
 ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS task_type TEXT NOT NULL DEFAULT 'special';
 ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS facebook_url TEXT;
 ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS rules TEXT NOT NULL DEFAULT '';
+ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS course_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_coin_tasks_public ON coin_tasks(active,task_type,created_at DESC);
 
 
