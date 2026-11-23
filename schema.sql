@@ -182,3 +182,23 @@ ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS task_type TEXT NOT NULL DEFAULT 
 ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS facebook_url TEXT;
 ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS rules TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_coin_tasks_public ON coin_tasks(active,task_type,created_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS member_course_progress(
+ member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ course_id TEXT NOT NULL,
+ lesson_index INTEGER NOT NULL DEFAULT 0,
+ completed_lessons JSONB NOT NULL DEFAULT '[]'::jsonb,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY(member_id,course_id)
+);
+CREATE TABLE IF NOT EXISTS member_course_bookmarks(
+ id BIGSERIAL PRIMARY KEY,
+ member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ course_id TEXT NOT NULL,
+ lesson_index INTEGER NOT NULL DEFAULT 0,
+ lesson_title TEXT NOT NULL DEFAULT '',
+ quote TEXT NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_course_bookmarks_member ON member_course_bookmarks(member_id,created_at DESC);
