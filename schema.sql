@@ -59,3 +59,16 @@ CREATE TABLE IF NOT EXISTS exam_result_sheets(
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_exam_results_status_created ON exam_result_sheets(status,created_at DESC);
+
+ALTER TABLE payment_packages ADD COLUMN IF NOT EXISTS package_status TEXT NOT NULL DEFAULT 'Published';
+ALTER TABLE payment_packages ADD COLUMN IF NOT EXISTS access_scope JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE payment_packages ADD COLUMN IF NOT EXISTS member_limit INTEGER;
+ALTER TABLE payment_packages ADD COLUMN IF NOT EXISTS badge TEXT;
+ALTER TABLE payment_offers ADD COLUMN IF NOT EXISTS offer_type TEXT NOT NULL DEFAULT 'coupon';
+ALTER TABLE payment_offers ADD COLUMN IF NOT EXISTS max_redemptions INTEGER;
+ALTER TABLE payment_offers ADD COLUMN IF NOT EXISTS package_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE payment_offers ADD COLUMN IF NOT EXISTS member_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS applied_offer_id BIGINT REFERENCES payment_offers(id);
+ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS original_amount NUMERIC(12,2);
+CREATE INDEX IF NOT EXISTS idx_payment_packages_status ON payment_packages(package_status,active);
+CREATE INDEX IF NOT EXISTS idx_payment_requests_offer ON payment_requests(applied_offer_id,status);
