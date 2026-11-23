@@ -72,3 +72,34 @@ ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS applied_offer_id BIGINT RE
 ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS original_amount NUMERIC(12,2);
 CREATE INDEX IF NOT EXISTS idx_payment_packages_status ON payment_packages(package_status,active);
 CREATE INDEX IF NOT EXISTS idx_payment_requests_offer ON payment_requests(applied_offer_id,status);
+
+CREATE TABLE IF NOT EXISTS member_cart_items(
+ id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ item_type TEXT NOT NULL,item_id TEXT NOT NULL,quantity INTEGER NOT NULL DEFAULT 1 CHECK(quantity BETWEEN 1 AND 20),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(member_id,item_type,item_id)
+);
+CREATE TABLE IF NOT EXISTS shop_orders(
+ id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id),subtotal NUMERIC(12,2) NOT NULL,
+ discount NUMERIC(12,2) NOT NULL DEFAULT 0,total NUMERIC(12,2) NOT NULL,coin_total INTEGER NOT NULL DEFAULT 0,
+ payment_method TEXT,payment_status TEXT NOT NULL DEFAULT 'Pending',order_status TEXT NOT NULL DEFAULT 'Pending',
+ coupon_code TEXT,admin_note TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),reviewed_at TIMESTAMPTZ
+);
+CREATE TABLE IF NOT EXISTS shop_order_items(
+ id BIGSERIAL PRIMARY KEY,order_id BIGINT NOT NULL REFERENCES shop_orders(id) ON DELETE CASCADE,
+ item_type TEXT NOT NULL,item_id TEXT NOT NULL,title TEXT NOT NULL,quantity INTEGER NOT NULL,
+ unit_price NUMERIC(12,2) NOT NULL DEFAULT 0,unit_coins INTEGER NOT NULL DEFAULT 0,
+ access_days INTEGER,metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+CREATE TABLE IF NOT EXISTS shop_order_payments(
+ id BIGSERIAL PRIMARY KEY,order_id BIGINT NOT NULL REFERENCES shop_orders(id),member_id UUID NOT NULL REFERENCES members(id),
+ method TEXT NOT NULL,transaction_id TEXT NOT NULL UNIQUE,payer_phone TEXT NOT NULL,amount NUMERIC(12,2) NOT NULL,
+ status TEXT NOT NULL DEFAULT 'Pending',admin_note TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),reviewed_at TIMESTAMPTZ
+);
+CREATE TABLE IF NOT EXISTS member_entitlements(
+ id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id),item_type TEXT NOT NULL,item_id TEXT NOT NULL,
+ order_id BIGINT REFERENCES shop_orders(id),starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),expires_at TIMESTAMPTZ,
+ status TEXT NOT NULL DEFAULT 'Active',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cart_member ON member_cart_items(member_id);
+CREATE INDEX IF NOT EXISTS idx_shop_orders_member ON shop_orders(member_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_entitlements_member ON member_entitlements(member_id,item_type,item_id,expires_at);
