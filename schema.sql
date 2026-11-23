@@ -176,3 +176,9 @@ CREATE TABLE IF NOT EXISTS coin_streak_claims(id BIGSERIAL PRIMARY KEY,member_id
 CREATE TABLE IF NOT EXISTS coin_tasks(id BIGSERIAL PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL,coin_reward INTEGER NOT NULL CHECK(coin_reward>0),proof_required BOOLEAN NOT NULL DEFAULT TRUE,active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS coin_task_submissions(id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,task_id BIGINT NOT NULL REFERENCES coin_tasks(id),proof TEXT,status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','Approved','Rejected')),admin_note TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),reviewed_at TIMESTAMPTZ,UNIQUE(member_id,task_id));
 CREATE INDEX IF NOT EXISTS idx_coin_task_submissions_status ON coin_task_submissions(status,created_at DESC);
+
+-- Public Daily / Special coin tasks
+ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS task_type TEXT NOT NULL DEFAULT 'special';
+ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS facebook_url TEXT;
+ALTER TABLE coin_tasks ADD COLUMN IF NOT EXISTS rules TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_coin_tasks_public ON coin_tasks(active,task_type,created_at DESC);
