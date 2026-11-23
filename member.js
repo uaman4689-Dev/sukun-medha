@@ -1,7 +1,7 @@
 (()=>{'use strict';const $=s=>document.querySelector(s),K='sm_member_token';let token=localStorage.getItem(K),attempt=null,quizItems=[],quizAnswers={},quizIndex=0,quizSeconds=15,quizInterval=null;const api=async(p,o={})=>{const r=await fetch('/api'+p,{...o,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(o.headers||{})}}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Request failed');return d};let cashoutSettings={enabled:false,minimumCoins:1000,coinsPerTaka:0};
 async function loadCashouts(){
  try{
-  const d=await api('/me/cashouts');cashoutSettings=d.settings||cashoutSettings;
+  const d=await api('/me/cashouts',{cache:'no-store'});cashoutSettings=d.settings||cashoutSettings;
   const rule=$('#cashoutRule'),form=$('#cashoutForm'),btn=$('#cashoutSubmit'),input=$('#cashoutCoins');
   const enabled=cashoutSettings.enabled&&cashoutSettings.coinsPerTaka>0;
   rule.textContent=enabled?'ন্যূনতম '+cashoutSettings.minimumCoins+' কয়েন। '+cashoutSettings.coinsPerTaka+' কয়েন = ৳১। '+(cashoutSettings.note||'Admin যাচাই করে পেমেন্ট করবেন।'):'Cashout আপাতত চালু নেই। Admin বিনিময় হার ও Cashout চালু করলে আবেদন করতে পারবেন।';
