@@ -44,9 +44,9 @@ document.addEventListener('click',async e=>{
    if(navigator.share){await navigator.share(shareData);}
    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url.href);alert('Course link কপি হয়েছে। এখন বন্ধুদের পাঠিয়ে দিন।');}
    else throw Error('এই Browser-এ Share/Copy সুবিধা নেই।');
-   const reward=await fetch('/api/courses/'+encodeURIComponent(courseId)+'/share',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:'{}'});
-   const result=await reward.json();if(!reward.ok)throw Error(result.error||'Share reward পাওয়া যায়নি');
-   share.textContent='✓ Shared ('+Number(result.coins||0)+' Coin)';
+   const picker=document.createElement('input');picker.type='file';picker.accept='image/jpeg,image/png,image/webp';picker.onchange=async()=>{const file=picker.files?.[0];if(!file){share.disabled=false;share.textContent=original;return;}if(file.size>8*1024*1024){alert('Screenshot সর্বোচ্চ 8MB হতে পারবে।');share.disabled=false;share.textContent=original;return;}try{const fd=new FormData();fd.append('screenshot',file);const response=await fetch('/api/me/courses/'+encodeURIComponent(courseId)+'/share-proof',{method:'POST',headers:{Authorization:'Bearer '+token},body:fd}),result=await response.json();if(!response.ok)throw Error(result.error||'Screenshot জমা হয়নি');share.textContent='✓ Screenshot Submitted';alert('Screenshot জমা হয়েছে। Admin Approve করলে '+Number(result.coins||0)+' Coin পাবেন।');}catch(err){alert(err.message);share.disabled=false;share.textContent=original;}};
+   alert('Share সম্পন্ন হলে আপনার Share-এর Screenshot নির্বাচন করুন। Admin Approve না করা পর্যন্ত Coin যোগ হবে না।');
+   picker.click();
   }catch(err){
    if(err.name==='AbortError'){share.textContent=original;}
    else{alert(err.message);share.textContent=original;}
