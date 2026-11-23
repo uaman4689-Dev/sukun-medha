@@ -43,3 +43,19 @@ CREATE TABLE IF NOT EXISTS certificate_records(
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_certificate_member ON certificate_records(member_id,created_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS exam_papers(
+ id BIGSERIAL PRIMARY KEY,title TEXT NOT NULL,category TEXT NOT NULL,subject TEXT NOT NULL,
+ full_marks NUMERIC(10,2) NOT NULL,duration TEXT,instructions TEXT,
+ sections JSONB NOT NULL DEFAULT '[]'::jsonb,status TEXT NOT NULL DEFAULT 'Draft' CHECK(status IN ('Draft','Published')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_exam_papers_status_created ON exam_papers(status,created_at DESC);
+CREATE TABLE IF NOT EXISTS exam_result_sheets(
+ id BIGSERIAL PRIMARY KEY,exam_title TEXT NOT NULL,category TEXT NOT NULL,exam_date DATE,
+ subjects JSONB NOT NULL DEFAULT '[]'::jsonb,students JSONB NOT NULL DEFAULT '[]'::jsonb,note TEXT,
+ status TEXT NOT NULL DEFAULT 'Draft' CHECK(status IN ('Draft','Published')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_exam_results_status_created ON exam_result_sheets(status,created_at DESC);
