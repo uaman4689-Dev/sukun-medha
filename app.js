@@ -11,11 +11,12 @@ function renderCollection(id,items,type){
  host.innerHTML=unique.slice(-6).reverse().map(x=>{
   const freeCourse=type==='course'&&(x.accessType==='free'||(!x.accessType&&Number(x.price||0)===0&&Number(x.coinPrice||0)===0));
   const regular=Number(x.regularPrice??x.price??0),offer=Number(x.offerPrice||0),hasOffer=offer>0&&offer<regular;
-  const meta=type==='course'?(freeCourse?'FREE · সবার জন্য উন্মুক্ত':(hasOffer?'৳ '+esc(offer)+' <del>৳ '+esc(regular)+'</del> · '+Math.round((regular-offer)*100/regular)+'% ছাড়':'৳ '+esc(regular))+(Number(x.coinPrice)>0?' · '+esc(x.coinPrice)+' কয়েন':''))
+  const discountPercent=hasOffer&&regular>0?Math.round((regular-offer)*100/regular):0;
+  const meta=type==='course'?(freeCourse?'<span class="course-free-label">FREE · সবার জন্য উন্মুক্ত</span>':(hasOffer?'<span class="course-price-current">৳ '+esc(offer)+'</span> <del class="course-price-old">৳ '+esc(regular)+'</del>':'<span class="course-price-current">৳ '+esc(regular)+'</span>')+(Number(x.coinPrice)>0?' <span class="course-coin-price">· '+esc(x.coinPrice)+' কয়েন</span>':''))
    :type==='competition'?'Entry: ৳ '+esc(x.fee||0)+' · '+esc(x.coinPrice||0)+' কয়েন':type==='challenge'?'Entry: ৳ '+esc(x.fee||0)+' · '+esc(x.coinPrice||0)+' কয়েন':type==='gift'?'পুরস্কার: '+esc(x.quantity||''):esc(x.discountText||x.code||'বিশেষ অফার');
   const href=type==='course'?'/course/'+encodeURIComponent(x.id):type==='competition'?'/competition.html?id='+encodeURIComponent(x.id):type==='challenge'?'/challenge.html?id='+encodeURIComponent(x.id):type==='offer'?'/payments':'/member.html';
   const image=type==='course'?(x.imageUrl||x.image||x.coverImage||x.thumbnail||''):'';
-  const imageHtml=type==='course'?'<a class="course-cover" href="'+href+'" aria-label="'+esc(x.title||'Course')+'">'+(image?'<img src="'+esc(image)+'" alt="'+esc(x.title||'Course')+'" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.classList.add(\'image-missing\')">':'<span class="course-cover-fallback">SUKUN MEDHA</span>')+'</a>':'';
+  const imageHtml=type==='course'?'<div class="course-cover-wrap"><a class="course-cover" href="'+href+'" aria-label="'+esc(x.title||'Course')+'">'+(image?'<img src="'+esc(image)+'" alt="'+esc(x.title||'Course')+'" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.classList.add(\'image-missing\')">':'<span class="course-cover-fallback">SUKUN MEDHA</span>')+'</a>'+(discountPercent?'<span class="course-discount-badge">'+discountPercent+'% ছাড়</span>':'')+'</div>':'';
   const description=String(x.description||x.details||'').trim();
   const shortDescription=description.length>105?description.slice(0,102).trim()+'…':description;
   let actions='';
