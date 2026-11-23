@@ -24,3 +24,24 @@
 .task-submit-btn:hover{background:#073d35!important;border-color:#073d35!important;transform:translateY(-1px);box-shadow:0 8px 18px #0b514544}
 .task-submit-btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 .task-submit-btn:focus-visible{outline:3px solid #d8b66b;outline-offset:3px}
+
+
+/* Compact course cards */
+#learnList{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+#learnList .course-card{min-width:0;min-height:0;padding:14px;gap:0}
+.course-cover{display:block;position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:10px;background:linear-gradient(135deg,#e8eee6,#f7f5e9);margin-bottom:12px}
+.course-cover img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .25s}
+.course-card:hover .course-cover img{transform:scale(1.035)}
+.course-cover-fallback{height:100%;display:grid;place-items:center;color:#9a804b;font:800 13px Manrope,sans-serif;letter-spacing:2px}
+.course-cover.image-missing:after{content:"SUKUN MEDHA";position:absolute;inset:0;display:grid;place-items:center;color:#9a804b;font:800 13px Manrope,sans-serif;letter-spacing:2px}
+#learnList .course-card .catalog-type{font-size:8px;margin-bottom:2px}
+#learnList .course-card h3{font-size:17px;line-height:1.4;margin:7px 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.8em}
+#learnList .course-card p{font-size:12px;line-height:1.55;margin:3px 0 5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:3.1em;flex:0 0 auto}
+#learnList .course-card .catalog-meta{font-size:12px;margin:7px 0 9px}
+.course-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+.course-actions .catalog-add,.course-buy-now{margin:0;min-width:0;padding:9px 6px;font-size:12px;border-radius:8px}
+.course-buy-now,.course-primary{display:flex;align-items:center;justify-content:center;border:0;border-radius:8px;background:#d9b76e;color:#183b34;padding:9px 8px;font:700 12px 'Hind Siliguri',sans-serif;cursor:pointer;text-align:center}
+.course-primary{margin-top:auto}
+.course-buy-now:disabled{opacity:.6;cursor:wait}
+@media(max-width:700px){#learnList{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}#learnList .course-card{padding:10px}#learnList .course-card h3{font-size:15px}#learnList .course-card p{font-size:11px}#learnList .course-actions{grid-template-columns:1fr}#learnList .course-actions .catalog-add,#learnList .course-buy-now{padding:8px 5px}}
+@media(max-width:390px){#learnList{grid-template-columns:1fr}#learnList .course-actions{grid-template-columns:1fr 1fr}}
