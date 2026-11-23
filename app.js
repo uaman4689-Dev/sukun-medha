@@ -36,3 +36,5 @@ async function loadHome(){
  }catch(e){console.warn('Public content could not be loaded',e);}
 }
 loadHome();
+// Homepage search: filter visible cards across the main discovery sections.
+(()=>{const input=document.getElementById('siteSearch');if(!input)return;input.addEventListener('input',()=>{const q=input.value.trim().toLocaleLowerCase('bn');document.querySelectorAll('#competitions .catalog-card,#learn .catalog-card,#challenges .catalog-card,#offers .catalog-card,#winners .winner-card,#quizzes .quiz-categories a').forEach(card=>{card.hidden=!!q&&!card.textContent.toLocaleLowerCase('bn').includes(q)});});})();
