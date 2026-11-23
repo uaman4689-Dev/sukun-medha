@@ -37,7 +37,7 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
   }catch(e){bad(res,e)}});
   app.post('/api/admin/packages',admin,async(req,res)=>{try{
     const {id,name,description,kind,durationDays,price,offerPrice,features,targetType,targetId,active,sortOrder}=req.body||{};
-    if(!name||!['monthly','yearly','custom','exam','competition','book','course'].includes(kind)||!Number.isInteger(Number(durationDays))||Number(durationDays)<1||!Number.isFinite(Number(price))||Number(price)<0)
+    if(!name||!['monthly','yearly','custom','exam','competition','book','course'].includes(kind)||!Number.isInteger(Number(durationDays))||Number(durationDays)<1||Number(durationDays)>3650||!Number.isFinite(Number(price))||Number(price)<0||(offerPrice!==''&&offerPrice!=null&&(!Number.isFinite(Number(offerPrice))||Number(offerPrice)<0||Number(offerPrice)>Number(price))))
       return res.status(400).json({error:'প্যাকেজের নাম, ধরন, মেয়াদ ও সঠিক মূল্য দিন।'});
     if(['exam','competition','book','course'].includes(kind)&&!targetId)return res.status(400).json({error:'এই প্যাকেজের জন্য নির্দিষ্ট Exam/Competition/Book/Course ID প্রয়োজন।'});
     const v=[String(name).slice(0,120),String(description||'').slice(0,1000),kind,Number(durationDays),Number(price),offerPrice===''||offerPrice==null?null:Number(offerPrice),JSON.stringify(Array.isArray(features)?features:[]),targetType||kind,targetId||null,active!==false,Number(sortOrder)||0];
@@ -46,11 +46,12 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
     else r=await pool.query('INSERT INTO payment_packages(name,description,kind,duration_days,price,offer_price,features,target_type,target_id,active,sort_order) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11) RETURNING *',v);
     res.json({package:r.rows[0]});
   }catch(e){bad(res,e)}});
+  app.patch('/api/admin/offers/:id',admin,async(req,res)=>{try{await pool.query('UPDATE payment_offers SET active=$1 WHERE id=$2',[req.body?.active===true,req.params.id]);res.json({ok:true})}catch(e){bad(res,e)}});
   app.patch('/api/admin/packages/:id',admin,async(req,res)=>{try{await pool.query('UPDATE payment_packages SET active=$1,updated_at=NOW() WHERE id=$2',[req.body?.active===true,req.params.id]);res.json({ok:true})}catch(e){bad(res,e)}});
   app.delete('/api/admin/packages/:id',admin,async(req,res)=>{try{await pool.query('UPDATE payment_packages SET active=false,updated_at=NOW() WHERE id=$1',[req.params.id]);res.json({ok:true})}catch(e){bad(res,e)}});
   app.post('/api/admin/offers',admin,async(req,res)=>{try{
     const {id,title,code,discountType,discountValue,startsAt,endsAt,active,description}=req.body||{};
-    if(!title||!['percent','fixed'].includes(discountType)||!Number.isFinite(Number(discountValue))||Number(discountValue)<=0)return res.status(400).json({error:'Offer-এর নাম ও সঠিক Discount দিন।'});
+    if(!title||!['percent','fixed'].includes(discountType)||!Number.isFinite(Number(discountValue))||Number(discountValue)<=0||(discountType==='percent'&&Number(discountValue)>100)||String(code||'').trim().length>40||(startsAt&&endsAt&&new Date(startsAt)>=new Date(endsAt)))return res.status(400).json({error:'Offer-এর নাম, Discount value ও সঠিক সময়সীমা দিন। Percent Discount ১০০-এর বেশি হতে পারবে না।'});
     const vals=[title,code||null,discountType,Number(discountValue),startsAt||null,endsAt||null,active!==false,description||''];
     const r=id?await pool.query('UPDATE payment_offers SET title=$1,code=$2,discount_type=$3,discount_value=$4,starts_at=$5,ends_at=$6,active=$7,description=$8 WHERE id=$9 RETURNING *',[...vals,id]):await pool.query('INSERT INTO payment_offers(title,code,discount_type,discount_value,starts_at,ends_at,active,description) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',vals);
     res.json({offer:r.rows[0]});
@@ -62,11 +63,13 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
     if(!q.rowCount){await c.query('ROLLBACK');return res.sendStatus(404)}
     const item=q.rows[0];if(item.status!=='Pending'){await c.query('ROLLBACK');return res.status(409).json({error:'এই পেমেন্টের সিদ্ধান্ত আগেই দেওয়া হয়েছে।'})}
     await c.query('UPDATE payment_requests SET status=$1,admin_note=$2,reviewed_at=NOW() WHERE id=$3',[status,String(adminNote||'').slice(0,500),item.id]);
+    if(status==='Rejected'&&!String(adminNote||'').trim()){await c.query('ROLLBACK');return res.status(400).json({error:'Reject করার কারণ লিখতে হবে।'});}
     if(status==='Approved'){
-      const p=await c.query('SELECT * FROM payment_packages WHERE id=$1',[item.package_id]);
+      const p=await c.query('SELECT * FROM payment_packages WHERE id=$1 AND active=true',[item.package_id]);
       if(!p.rowCount)throw new Error('Package missing');
       const pkg=p.rows[0];
-      await c.query("INSERT INTO member_subscriptions(member_id,package_id,source_payment_id,starts_at,expires_at,status,target_type,target_id) VALUES($1,$2,$3,NOW(),NOW()+make_interval(days => $4::int),'Active',$5,$6)",[item.member_id,pkg.id,item.id,pkg.duration_days,pkg.target_type,pkg.target_id]);
+      const current=await c.query("SELECT GREATEST(NOW(),COALESCE(MAX(expires_at),NOW())) AS next_start FROM member_subscriptions WHERE member_id=$1 AND status='Active' AND expires_at>NOW() AND target_type=$2 AND COALESCE(target_id,'')=COALESCE($3,'')",[item.member_id,pkg.target_type,pkg.target_id]);
+      await c.query("INSERT INTO member_subscriptions(member_id,package_id,source_payment_id,starts_at,expires_at,status,target_type,target_id) VALUES($1,$2,$3,$4,$4+make_interval(days => $5::int),'Active',$6,$7)",[item.member_id,pkg.id,item.id,current.rows[0].next_start,pkg.duration_days,pkg.target_type,pkg.target_id]);
     }
     await c.query('COMMIT');res.json({ok:true,status});
   }catch(e){await c.query('ROLLBACK');bad(res,e)}finally{c.release()}});
