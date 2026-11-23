@@ -165,3 +165,13 @@ CREATE TABLE IF NOT EXISTS coin_cashout_requests(
 );
 CREATE INDEX IF NOT EXISTS idx_coin_cashout_status_created ON coin_cashout_requests(status,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_coin_cashout_member ON coin_cashout_requests(member_id,created_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS coin_engagement_settings(id SMALLINT PRIMARY KEY DEFAULT 1 CHECK(id=1),data JSONB NOT NULL DEFAULT '{"competitionShareCoins":5,"shareDailyLimit":10,"streakRewards":{"3":10,"7":30,"14":75,"30":200},"referralCoins":10}'::jsonb,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+INSERT INTO coin_engagement_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING;
+CREATE TABLE IF NOT EXISTS coin_competition_shares(id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,competition_id TEXT NOT NULL,coins INTEGER NOT NULL DEFAULT 0,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(member_id,competition_id));
+CREATE INDEX IF NOT EXISTS idx_coin_share_member_date ON coin_competition_shares(member_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS coin_streak_claims(id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,claim_day DATE NOT NULL DEFAULT CURRENT_DATE,streak_days INTEGER NOT NULL,coins INTEGER NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(member_id,claim_day));
+CREATE TABLE IF NOT EXISTS coin_tasks(id BIGSERIAL PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL,coin_reward INTEGER NOT NULL CHECK(coin_reward>0),proof_required BOOLEAN NOT NULL DEFAULT TRUE,active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS coin_task_submissions(id BIGSERIAL PRIMARY KEY,member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,task_id BIGINT NOT NULL REFERENCES coin_tasks(id),proof TEXT,status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','Approved','Rejected')),admin_note TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),reviewed_at TIMESTAMPTZ,UNIQUE(member_id,task_id));
+CREATE INDEX IF NOT EXISTS idx_coin_task_submissions_status ON coin_task_submissions(status,created_at DESC);
