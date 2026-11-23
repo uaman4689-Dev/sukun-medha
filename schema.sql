@@ -142,3 +142,26 @@ CREATE TABLE IF NOT EXISTS online_exam_attempts(
 );
 CREATE INDEX IF NOT EXISTS idx_online_attempt_comp ON online_exam_attempts(competition_id,status,started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_online_attempt_member ON online_exam_attempts(member_id,competition_id,attempt_no DESC);
+
+CREATE TABLE IF NOT EXISTS coin_cashout_settings(
+ id SMALLINT PRIMARY KEY DEFAULT 1 CHECK(id=1),
+ data JSONB NOT NULL DEFAULT '{"enabled":false,"minimumCoins":1000,"coinsPerTaka":0,"note":"ক্যাশআউট আবেদন Admin যাচাই করে ম্যানুয়ালি পেমেন্ট করবেন।"}'::jsonb,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO coin_cashout_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING;
+CREATE TABLE IF NOT EXISTS coin_cashout_requests(
+ id BIGSERIAL PRIMARY KEY,
+ member_id UUID NOT NULL REFERENCES members(id),
+ coins INTEGER NOT NULL CHECK(coins>0),
+ amount_taka NUMERIC(12,2) NOT NULL CHECK(amount_taka>0),
+ coins_per_taka INTEGER NOT NULL CHECK(coins_per_taka>0),
+ payout_method TEXT NOT NULL CHECK(payout_method IN ('bKash','Nagad','Rocket')),
+ payout_phone TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','Paid','Rejected')),
+ admin_note TEXT,
+ payout_reference TEXT,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ reviewed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_coin_cashout_status_created ON coin_cashout_requests(status,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_coin_cashout_member ON coin_cashout_requests(member_id,created_at DESC);
