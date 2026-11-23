@@ -12,6 +12,7 @@ const sign=p=>jwt.sign(p,JWT_SECRET,{expiresIn:'7d'});
 function auth(req,res,next){try{req.user=jwt.verify((req.headers.authorization||'').replace(/^Bearer\s+/i,''),JWT_SECRET);next()}catch{res.status(401).json({error:'লগইন প্রয়োজন।'})}}
 const admin=(req,res,next)=>auth(req,res,()=>req.user.role==='admin'?next():res.sendStatus(403));
 const member=(req,res,next)=>auth(req,res,()=>req.user.role==='member'?next():res.sendStatus(403));
+require('./payment-module')(app,pool,{member,admin});
 const safe=r=>({id:r.id,name:r.name,phone:r.phone,email:r.email,role:r.role,occupation:r.occupation,referralCode:r.referral_code,coinBalance:r.coin_balance,status:r.status,createdAt:r.created_at});
 async function state(){const r=await pool.query('SELECT data FROM platform_state WHERE id=1');return r.rows[0]?.data||defaults}
 app.get('/api/health',async(req,res)=>{try{await pool.query('SELECT 1');res.json({ok:true,database:'connected'})}catch{res.status(503).json({ok:false,database:'unavailable'})}});
