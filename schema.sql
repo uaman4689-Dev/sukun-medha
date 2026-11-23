@@ -32,3 +32,14 @@ CREATE TABLE IF NOT EXISTS payment_settings(id SMALLINT PRIMARY KEY DEFAULT 1 CH
 INSERT INTO payment_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING;
 
 ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS offer_code TEXT;
+
+CREATE TABLE IF NOT EXISTS certificate_records(
+ id BIGSERIAL PRIMARY KEY,serial TEXT NOT NULL UNIQUE,member_id UUID REFERENCES members(id) ON DELETE SET NULL,
+ recipient_name TEXT NOT NULL,recipient_phone TEXT,recipient_email TEXT,exam_title TEXT NOT NULL,
+ achievement TEXT NOT NULL DEFAULT 'সফলভাবে পরীক্ষা সম্পন্ন করেছেন',score TEXT,grade TEXT,
+ issue_date DATE NOT NULL DEFAULT CURRENT_DATE,issuer_name TEXT NOT NULL DEFAULT 'SUKUN MEDHA',
+ issuer_title TEXT NOT NULL DEFAULT 'Authorized Signatory',organization TEXT NOT NULL DEFAULT 'SUKUN MEDHA',
+ status TEXT NOT NULL DEFAULT 'Issued' CHECK(status IN ('Issued','Revoked')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_certificate_member ON certificate_records(member_id,created_at DESC);
