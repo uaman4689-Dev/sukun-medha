@@ -20,7 +20,8 @@ function renderCollection(id,items,type){
   const shortDescription=description.length>105?description.slice(0,102).trim()+'…':description;
   let actions='';
   if(type==='course'){
-   actions=freeCourse?'<a class="course-primary" href="'+href+'">কোর্স শুরু করুন ↗</a>':'<div class="course-actions"><button class="catalog-add" data-add-type="course" data-add-id="'+esc(x.id)+'">Add to Cart</button><button class="course-buy-now" data-buy-now="course" data-buy-id="'+esc(x.id)+'">Buy Now</button></div>';
+   const shareButton='<button class="catalog-add course-share-home" type="button" data-course-share="'+esc(x.id)+'">↗ Share</button>';
+   actions=freeCourse?'<div class="course-actions"><a class="course-primary" href="'+href+'">কোর্স শুরু করুন ↗</a>'+shareButton+'</div>':'<div class="course-actions"><button class="catalog-add" data-add-type="course" data-add-id="'+esc(x.id)+'">Add to Cart</button><button class="course-buy-now" data-buy-now="course" data-buy-id="'+esc(x.id)+'">Buy Now</button>'+shareButton+'</div>';
   }else if(['competition','challenge'].includes(type)&&!freeCourse){
    actions='<button class="catalog-add" data-add-type="'+type+'" data-add-id="'+esc(x.id)+'">Cart-এ যোগ করুন</button>';
   }
@@ -28,6 +29,30 @@ function renderCollection(id,items,type){
  }).join('');
 }
 document.addEventListener('click',async e=>{
+ const share=e.target.closest('[data-course-share]');
+ if(share){
+  const token=localStorage.getItem('sm_member_token');
+  if(!token){location.href='/member.html';return;}
+  const courseId=share.dataset.courseShare,original=share.textContent;
+  share.disabled=true;share.textContent='Preparing…';
+  try{
+   const me=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||'Login required');return d;});
+   const url=new URL('/course/'+encodeURIComponent(courseId),location.origin);
+   if(me.user?.referralCode)url.searchParams.set('ref',me.user.referralCode);
+   const shareData={title:'SUKUN MEDHA Course',text:'এই Course-টি SUKUN MEDHA-তে দেখুন',url:url.href};
+   if(navigator.share){await navigator.share(shareData);}
+   else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url.href);alert('Course link কপি হয়েছে। এখন বন্ধুদের পাঠিয়ে দিন।');}
+   else throw Error('এই Browser-এ Share/Copy সুবিধা নেই।');
+   const reward=await fetch('/api/courses/'+encodeURIComponent(courseId)+'/share',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:'{}'});
+   const result=await reward.json();if(!reward.ok)throw Error(result.error||'Share reward পাওয়া যায়নি');
+   share.textContent='✓ Shared ('+Number(result.coins||0)+' Coin)';
+  }catch(err){
+   if(err.name==='AbortError'){share.textContent=original;}
+   else{alert(err.message);share.textContent=original;}
+   share.disabled=false;
+  }
+  return;
+ }
  const buy=e.target.closest('[data-buy-now]');
  const b=buy||e.target.closest('[data-add-type]');if(!b)return;
  const token=localStorage.getItem('sm_member_token');if(!token){location.href='/buy?type='+encodeURIComponent(buy?buy.dataset.buyNow:b.dataset.addType)+'&id='+encodeURIComponent(buy?buy.dataset.buyId:b.dataset.addId)+'&action='+(buy?'buy':'cart');return;}
