@@ -17,6 +17,7 @@ require('./payment-module')(app,pool,{member,admin});
 require('./commerce-module')(app,pool,{member,admin});
 require('./coin-cashout-module')(app,pool,{member,admin});
 require('./coin-engagement-module')(app,pool,{member,admin});
+require('./admin-data-module')(app,pool,{admin});
 require('./certificate-module')(app,pool,{member,admin});
 require('./exam-module')(app,pool,{admin});
 const safe=r=>({id:r.id,name:r.name,phone:r.phone,email:r.email,role:r.role,occupation:r.occupation,referralCode:r.referral_code,coinBalance:r.coin_balance,status:r.status,createdAt:r.created_at});
