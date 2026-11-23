@@ -118,3 +118,27 @@ CREATE TABLE IF NOT EXISTS event_entries(
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(member_id,event_type,event_id)
 );
 CREATE INDEX IF NOT EXISTS idx_event_entries_event ON event_entries(event_type,event_id,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS online_exam_attempts(
+ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ competition_id TEXT NOT NULL,
+ attempt_no INTEGER NOT NULL DEFAULT 1,
+ questions JSONB NOT NULL DEFAULT '[]'::jsonb,
+ duration_seconds INTEGER NOT NULL CHECK(duration_seconds>0),
+ started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ expires_at TIMESTAMPTZ NOT NULL,
+ answers JSONB NOT NULL DEFAULT '{}'::jsonb,
+ objective_score NUMERIC(10,2) NOT NULL DEFAULT 0,
+ written_max NUMERIC(10,2) NOT NULL DEFAULT 0,
+ written_score NUMERIC(10,2) NOT NULL DEFAULT 0,
+ written_answers JSONB NOT NULL DEFAULT '[]'::jsonb,
+ status TEXT NOT NULL DEFAULT 'In Progress' CHECK(status IN ('In Progress','Pending Evaluation','Graded')),
+ submitted_at TIMESTAMPTZ,
+ graded_at TIMESTAMPTZ,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE(member_id,competition_id,attempt_no)
+);
+CREATE INDEX IF NOT EXISTS idx_online_attempt_comp ON online_exam_attempts(competition_id,status,started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_online_attempt_member ON online_exam_attempts(member_id,competition_id,attempt_no DESC);
