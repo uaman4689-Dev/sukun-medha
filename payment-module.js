@@ -46,6 +46,7 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
     else r=await pool.query('INSERT INTO payment_packages(name,description,kind,duration_days,price,offer_price,features,target_type,target_id,active,sort_order) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11) RETURNING *',v);
     res.json({package:r.rows[0]});
   }catch(e){bad(res,e)}});
+  app.patch('/api/admin/packages/:id',admin,async(req,res)=>{try{await pool.query('UPDATE payment_packages SET active=$1,updated_at=NOW() WHERE id=$2',[req.body?.active===true,req.params.id]);res.json({ok:true})}catch(e){bad(res,e)}});
   app.delete('/api/admin/packages/:id',admin,async(req,res)=>{try{await pool.query('UPDATE payment_packages SET active=false,updated_at=NOW() WHERE id=$1',[req.params.id]);res.json({ok:true})}catch(e){bad(res,e)}});
   app.post('/api/admin/offers',admin,async(req,res)=>{try{
     const {id,title,code,discountType,discountValue,startsAt,endsAt,active,description}=req.body||{};
