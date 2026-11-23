@@ -9,7 +9,7 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
   }catch(e){bad(res,e)}});
   app.get('/api/me/payments',member,async(req,res)=>{try{
     const r=await pool.query('SELECT p.*,s.name package_name FROM payment_requests p LEFT JOIN payment_packages s ON s.id=p.package_id WHERE p.member_id=$1 ORDER BY p.created_at DESC',[req.user.id]);
-    const a=await pool.query('SELECT s.*,p.name package_name,CASE WHEN s.status='Active' AND s.expires_at<=NOW() THEN 'Expired' ELSE s.status END AS effective_status FROM member_subscriptions s LEFT JOIN payment_packages p ON p.id=s.package_id WHERE s.member_id=$1 ORDER BY s.created_at DESC',[req.user.id]);
+    const a=await pool.query(`SELECT s.*,p.name package_name,CASE WHEN s.status='Active' AND s.expires_at<=NOW() THEN 'Expired' ELSE s.status END AS effective_status FROM member_subscriptions s LEFT JOIN payment_packages p ON p.id=s.package_id WHERE s.member_id=$1 ORDER BY s.created_at DESC`,[req.user.id]);
     res.json({payments:r.rows,subscriptions:a.rows});
   }catch(e){bad(res,e)}});
   app.post('/api/me/payments',member,async(req,res)=>{try{
