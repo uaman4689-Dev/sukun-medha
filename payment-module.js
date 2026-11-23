@@ -20,6 +20,12 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
     const r=await pool.query("SELECT s.id,s.package_id,p.name,p.kind,p.features,p.access_scope,s.target_type,s.target_id,s.starts_at,s.expires_at,CASE WHEN s.status='Active' AND s.starts_at<=NOW() AND s.expires_at>NOW() THEN 'Active' ELSE 'Expired' END AS access_status FROM member_subscriptions s JOIN payment_packages p ON p.id=s.package_id WHERE s.member_id=$1 ORDER BY s.created_at DESC",[req.user.id]);
     res.json({access:r.rows,active:r.rows.filter(x=>x.access_status==='Active')});
   }catch(e){bad(res,e)}});
+  app.get('/api/me/access/check',member,async(req,res)=>{try{
+    const key=String(req.query.key||'').trim(),type=String(req.query.type||'').trim(),target=String(req.query.id||'').trim();
+    if(!key&&!type)return res.status(400).json({error:'Access key অথবা target type দিন।'});
+    const r=await pool.query("SELECT EXISTS(SELECT 1 FROM member_subscriptions s JOIN payment_packages p ON p.id=s.package_id WHERE s.member_id=$1 AND s.status='Active' AND s.starts_at<=NOW() AND s.expires_at>NOW() AND ((p.target_type=$2 AND COALESCE(p.target_id,'')=COALESCE($3,'')) OR (p.target_type='membership' AND (p.access_scope->'keys' ? $4 OR p.access_scope->'keys' ? 'all')))) AS allowed",[req.user.id,type,target,key]);
+    res.json({allowed:r.rows[0].allowed===true});
+  }catch(e){bad(res,e)}});
   app.post('/api/me/payments',member,async(req,res)=>{const c=await pool.connect();try{
     const {packageId,method,transactionId,payerPhone,amount,note,offerCode}=req.body||{};
     if(!packageId||!['bKash','Nagad','Rocket','Bank'].includes(method)||!String(transactionId||'').trim()||!String(payerPhone||'').trim())
