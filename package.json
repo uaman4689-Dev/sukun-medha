@@ -1,7 +1,22 @@
 {
-  "name":"sukun-medha","version":"1.0.0","private":true,
-  "description":"SUKUN MEDHA Education & Competition Platform",
-  "scripts":{"start":"node server.js","check":"node --check server.js && node --check app.js && node --check admin/admin.js && node --check member.js"},
-  "engines":{"node":">=20"},
-  "dependencies":{"bcryptjs":"^2.4.3","dotenv":"^16.4.7","express":"^4.21.2","express-rate-limit":"^7.5.0","helmet":"^8.0.0","jsonwebtoken":"^9.0.2","pg":"^8.13.1"}
+  "name": "sukun-medha",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SUKUN MEDHA Education & Competition Platform",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check online-exam-module.js && node --check commerce-module.js && node --check competition.js && node --check admin/competition-office.js && node --check admin/admin.js && node --check member.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  }
 }
