@@ -45,3 +45,29 @@
 .course-buy-now:disabled{opacity:.6;cursor:wait}
 @media(max-width:700px){#learnList{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}#learnList .course-card{padding:10px}#learnList .course-card h3{font-size:15px}#learnList .course-card p{font-size:11px}#learnList .course-actions{grid-template-columns:1fr}#learnList .course-actions .catalog-add,#learnList .course-buy-now{padding:8px 5px}}
 @media(max-width:390px){#learnList{grid-template-columns:1fr}#learnList .course-actions{grid-template-columns:1fr 1fr}}
+
+
+/* Premium course catalogue cards */
+#learnList .course-card{position:relative;overflow:hidden;padding:13px;border:1px solid #e8e5d9;border-radius:17px;background:linear-gradient(155deg,#fff 0%,#fff 68%,#fbfaf5 100%);box-shadow:0 8px 26px rgba(20,55,43,.07);transition:transform .24s ease,box-shadow .24s ease,border-color .24s ease}
+#learnList .course-card:hover{transform:translateY(-6px);border-color:#d7c18c;box-shadow:0 18px 38px rgba(20,55,43,.13)}
+#learnList .course-cover-wrap{position:relative;margin-bottom:13px}
+#learnList .course-cover{margin:0;aspect-ratio:16/9;border-radius:12px;background:#f0f1e9}
+#learnList .course-cover img{transition:transform .45s ease}
+#learnList .course-card:hover .course-cover img{transform:scale(1.06)}
+.course-discount-badge{position:absolute;top:10px;right:10px;z-index:2;padding:7px 11px;border-radius:8px;background:linear-gradient(135deg,#b58b42,#e0c27b);color:#183b34;font:800 12px Manrope,sans-serif;box-shadow:0 5px 15px #152f2630}
+#learnList .course-card .catalog-type{font-size:8px;letter-spacing:1.8px;color:#a78649;margin:0 0 4px}
+#learnList .course-card h3{font-size:18px;line-height:1.4;color:#143e36;margin:5px 0 5px;min-height:2.8em}
+#learnList .course-card p{font-size:12px;line-height:1.65;color:#78847c;margin:0 0 8px;min-height:3.3em}
+#learnList .course-card .catalog-meta{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:8px 0 13px;min-height:27px;color:#8b7040}
+.course-price-current{font:800 18px Manrope,'Hind Siliguri',sans-serif;color:#0b5947}
+.course-price-old{font:500 12px Manrope,sans-serif;color:#9aa29a}
+.course-coin-price{font-size:11px;color:#92733b;font-weight:700}
+.course-free-label{display:inline-flex;padding:5px 9px;border-radius:6px;background:#e9f4ec;color:#23633f;font-size:11px;font-weight:700}
+#learnList .course-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#learnList .course-actions .catalog-add,#learnList .course-actions .course-buy-now,#learnList .course-actions .course-primary{display:flex;align-items:center;justify-content:center;min-height:38px;padding:7px 5px;margin:0;border-radius:8px;font-size:11px;white-space:nowrap}
+#learnList .course-actions .catalog-add{background:#104e40;color:#fff}
+#learnList .course-actions .course-buy-now{background:linear-gradient(135deg,#ead49b,#d1ad60);color:#243d32}
+#learnList .course-actions .course-share-home{background:#f2f4ef;color:#315b4c;border:1px solid #dce5da}
+#learnList .course-actions .course-primary{background:#104e40;color:#fff}
+@media(max-width:700px){#learnList .course-card{padding:9px;border-radius:14px}#learnList .course-card h3{font-size:14px}#learnList .course-card p{font-size:10px}#learnList .course-actions{grid-template-columns:1fr;gap:6px}#learnList .course-actions .catalog-add,#learnList .course-actions .course-buy-now,#learnList .course-actions .course-primary{min-height:35px;font-size:11px}}
+@media(max-width:390px){#learnList .course-actions{grid-template-columns:1fr 1fr}#learnList .course-actions .course-share-home{grid-column:1/-1}}
