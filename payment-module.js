@@ -9,7 +9,7 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
   }catch(e){bad(res,e)}});
   app.get('/api/me/payments',member,async(req,res)=>{try{
     const r=await pool.query('SELECT p.*,s.name package_name FROM payment_requests p LEFT JOIN payment_packages s ON s.id=p.package_id WHERE p.member_id=$1 ORDER BY p.created_at DESC',[req.user.id]);
-    const a=await pool.query('SELECT s.*,p.name package_name FROM member_subscriptions s LEFT JOIN payment_packages p ON p.id=s.package_id WHERE s.member_id=$1 ORDER BY s.created_at DESC',[req.user.id]);
+    const a=await pool.query('SELECT s.*,p.name package_name,CASE WHEN s.status='Active' AND s.expires_at<=NOW() THEN 'Expired' ELSE s.status END AS effective_status FROM member_subscriptions s LEFT JOIN payment_packages p ON p.id=s.package_id WHERE s.member_id=$1 ORDER BY s.created_at DESC',[req.user.id]);
     res.json({payments:r.rows,subscriptions:a.rows});
   }catch(e){bad(res,e)}});
   app.post('/api/me/payments',member,async(req,res)=>{try{
@@ -65,7 +65,7 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
       const p=await c.query('SELECT * FROM payment_packages WHERE id=$1',[item.package_id]);
       if(!p.rowCount)throw new Error('Package missing');
       const pkg=p.rows[0];
-      await c.query("INSERT INTO member_subscriptions(member_id,package_id,source_payment_id,starts_at,expires_at,status,target_type,target_id) VALUES($1,$2,$3,NOW(),NOW()+($4||' days')::interval,'Active',$5,$6)",[item.member_id,pkg.id,item.id,pkg.duration_days,pkg.target_type,pkg.target_id]);
+      await c.query("INSERT INTO member_subscriptions(member_id,package_id,source_payment_id,starts_at,expires_at,status,target_type,target_id) VALUES($1,$2,$3,NOW(),NOW()+make_interval(days => $4::int),'Active',$5,$6)",[item.member_id,pkg.id,item.id,pkg.duration_days,pkg.target_type,pkg.target_id]);
     }
     await c.query('COMMIT');res.json({ok:true,status});
   }catch(e){await c.query('ROLLBACK');bad(res,e)}finally{c.release()}});
