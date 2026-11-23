@@ -6,9 +6,10 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
   const round=n=>Math.max(0,Math.round((Number(n)+Number.EPSILON)*100)/100);
   app.get('/api/plans',async(req,res)=>{try{
     const p=await pool.query("SELECT * FROM payment_packages WHERE active=true AND package_status='Published' ORDER BY sort_order,id");
-    const o=await pool.query("SELECT id,title,code,discount_type,discount_value,starts_at,ends_at,description,offer_type,package_ids FROM payment_offers WHERE active=true AND (starts_at IS NULL OR starts_at<=NOW()) AND (ends_at IS NULL OR ends_at>=NOW()) ORDER BY id DESC");
+    const o=await pool.query("SELECT o.*,(SELECT COUNT(*)::int FROM payment_requests r WHERE r.applied_offer_id=o.id AND r.status<>'Rejected') AS redeemed FROM payment_offers o WHERE active=true AND (starts_at IS NULL OR starts_at<=NOW()) AND (ends_at IS NULL OR ends_at>=NOW()) ORDER BY id DESC");
     const s=await pool.query("SELECT data FROM payment_settings WHERE id=1");
-    res.json({packages:p.rows,offers:o.rows,payment:s.rows[0]?.data||{}});
+    const packages=p.rows.map(pkg=>{const base=round(pkg.offer_price==null?pkg.price:pkg.offer_price);const eligible=o.rows.filter(x=>!x.code&&(!x.max_redemptions||Number(x.redeemed)<Number(x.max_redemptions))&&(!Array.isArray(x.package_ids)||!x.package_ids.length||x.package_ids.map(String).includes(String(pkg.id))));let best=null,bestPrice=base;for(const x of eligible){const v=round(x.discount_type==='percent'?base*(1-Number(x.discount_value)/100):base-Number(x.discount_value));if(v<bestPrice){bestPrice=v;best=x;}}return {...pkg,display_price:bestPrice,auto_offer:best?{id:best.id,title:best.title,offer_type:best.offer_type}:null};});
+    res.json({packages,offers:o.rows,payment:s.rows[0]?.data||{}});
   }catch(e){bad(res,e)}});
   app.get('/api/me/payments',member,async(req,res)=>{try{
     const r=await pool.query('SELECT p.*,s.name package_name FROM payment_requests p LEFT JOIN payment_packages s ON s.id=p.package_id WHERE p.member_id=$1 ORDER BY p.created_at DESC',[req.user.id]);
@@ -39,6 +40,9 @@ module.exports = function mountPayments(app,pool,{member,admin}) {
       if(o.max_redemptions){const used=await c.query("SELECT COUNT(*)::int n FROM payment_requests WHERE applied_offer_id=$1 AND status<>'Rejected'",[o.id]);if(used.rows[0].n>=o.max_redemptions){await c.query('ROLLBACK');return res.status(409).json({error:'এই অফারের ব্যবহারসীমা শেষ।'});}}
       price=o.discount_type==='percent'?original*(1-Number(o.discount_value)/100):original-Number(o.discount_value);
       price=round(price);offerId=o.id;
+    } else {
+      const oq=await c.query("SELECT * FROM payment_offers WHERE code IS NULL AND active=true AND (starts_at IS NULL OR starts_at<=NOW()) AND (ends_at IS NULL OR ends_at>=NOW()) ORDER BY id DESC FOR UPDATE");
+      for(const o of oq.rows){const allowed=Array.isArray(o.package_ids)?o.package_ids.map(String):[],members=Array.isArray(o.member_ids)?o.member_ids.map(String):[];if(allowed.length&&!allowed.includes(String(pkg.id)))continue;if(members.length&&!members.includes(String(req.user.id)))continue;if(o.max_redemptions){const used=await c.query("SELECT COUNT(*)::int n FROM payment_requests WHERE applied_offer_id=$1 AND status<>'Rejected'",[o.id]);if(used.rows[0].n>=o.max_redemptions)continue;}const discounted=round(o.discount_type==='percent'?original*(1-Number(o.discount_value)/100):original-Number(o.discount_value));if(discounted<price){price=discounted;offerId=o.id;}}
     }
     const submitted=Number(amount);
     if(!Number.isFinite(submitted)||Math.abs(submitted-price)>0.001){await c.query('ROLLBACK');return res.status(400).json({error:'সঠিক পরিশোধযোগ্য পরিমাণ ৳'+price+' দিন।'});}
