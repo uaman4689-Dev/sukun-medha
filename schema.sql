@@ -202,3 +202,15 @@ CREATE TABLE IF NOT EXISTS member_course_bookmarks(
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_course_bookmarks_member ON member_course_bookmarks(member_id,created_at DESC);
+
+
+-- One-time member reward for sharing each published course
+CREATE TABLE IF NOT EXISTS coin_course_shares(
+ id BIGSERIAL PRIMARY KEY,
+ member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ course_id TEXT NOT NULL,
+ coins INTEGER NOT NULL DEFAULT 0 CHECK(coins>=0),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE(member_id,course_id)
+);
+CREATE INDEX IF NOT EXISTS idx_coin_course_shares_member ON coin_course_shares(member_id,created_at DESC);
