@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS member_subscriptions(
  source_payment_id BIGINT NOT NULL UNIQUE REFERENCES payment_requests(id),starts_at TIMESTAMPTZ NOT NULL,expires_at TIMESTAMPTZ NOT NULL,
  status TEXT NOT NULL DEFAULT 'Active',target_type TEXT NOT NULL,target_id TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE member_subscriptions ALTER COLUMN source_payment_id DROP NOT NULL;
 CREATE TABLE IF NOT EXISTS payment_settings(id SMALLINT PRIMARY KEY DEFAULT 1 CHECK(id=1),data JSONB NOT NULL DEFAULT '{}'::jsonb,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 INSERT INTO payment_settings(id) VALUES(1) ON CONFLICT(id) DO NOTHING;
 
