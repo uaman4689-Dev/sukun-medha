@@ -19,7 +19,7 @@ async function init(){
  $('#showQuestions').onclick=async()=>{
   if(!token){location.href='/member.html';return;}
   try{
-   const response=await fetch('/api/competitions/'+encodeURIComponent(id)+'/questions',{headers:{Authorization:'Bearer '+token}});
+   const join=await fetch('/api/competitions/'+encodeURIComponent(id)+'/join',{method:'POST',headers:{Authorization:'Bearer '+token}});const joined=await join.json();if(!join.ok)throw Error(joined.error||'Entry failed');const response=await fetch('/api/competitions/'+encodeURIComponent(id)+'/questions',{headers:{Authorization:'Bearer '+token}});
    const data=await response.json();
    if(!response.ok)throw Error(data.error||'প্রশ্ন দেখার Access নেই।');
    $('#questions').innerHTML=(data.questions||[]).map((q,i)=>'<article class="q"><b>'+(i+1)+'. '+esc(q.text)+'</b><p>'+esc(q.type)+' · '+esc(q.marks)+' Marks</p>'+(q.options||[]).map(o=>'<div>• '+esc(o)+'</div>').join('')+'</article>').join('')||'প্রশ্ন এখনো প্রকাশিত হয়নি।';
