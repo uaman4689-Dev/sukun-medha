@@ -12,6 +12,7 @@ const sign=p=>jwt.sign(p,JWT_SECRET,{expiresIn:'7d'});
 function auth(req,res,next){try{req.user=jwt.verify((req.headers.authorization||'').replace(/^Bearer\s+/i,''),JWT_SECRET);next()}catch{res.status(401).json({error:'লগইন প্রয়োজন।'})}}
 const admin=(req,res,next)=>auth(req,res,()=>req.user.role==='admin'?next():res.sendStatus(403));
 const member=(req,res,next)=>auth(req,res,()=>req.user.role==='member'?next():res.sendStatus(403));
+require('./online-exam-module')(app,pool,{member,admin});
 require('./payment-module')(app,pool,{member,admin});
 require('./commerce-module')(app,pool,{member,admin});
 require('./certificate-module')(app,pool,{member,admin});
