@@ -24,4 +24,14 @@ $('#attemptList').addEventListener('submit',async function(e){
  try{await api('/admin/online-exams/attempts/'+encodeURIComponent(f.dataset.attempt)+'/grade',{method:'PUT',body:JSON.stringify({grades})});$('#gradeMsg').textContent='Written Answer মূল্যায়ন Save হয়েছে।';$('#loadAttempts').click();}
  catch(x){$('#gradeMsg').textContent=x.message;}
 });
+
+$('#spinCompetition').onclick=async()=>{
+ const count=Math.max(1,Math.min(100,Number($('#spinWinnersCount').value)||1));
+ if(!id())return alert('Competition নির্বাচন করুন।');
+ if(!confirm(count+' জন Winner নির্বাচন করে Spin Result Sheet Publish করবেন?'))return;
+ const b=$('#spinCompetition');b.disabled=true;
+ try{const d=await api('/admin/competitions/'+encodeURIComponent(id())+'/spin-result',{method:'POST',body:JSON.stringify({winnersCount:count,reroll:confirm('আগের Result থাকলে নতুন করে Spin করবেন?')})});results=d.results||[];renderR();$('#rMsg').textContent=d.message;$('#publishResults').disabled=true;}
+ catch(e){$('#rMsg').textContent=e.message}
+ finally{b.disabled=false}
+};
 const printNode=selector=>{const node=$(selector),w=window.open('','_blank');if(!node||!w)return;w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>SUKUN MEDHA Print</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}button{display:none!important}.q{border:1px solid #bbb;padding:12px;margin:10px 0}input,textarea{border:1px solid #aaa;padding:5px}@media print{body{padding:0}}</style></head><body><h2>SUKUN MEDHA · '+document.title+'</h2>'+node.innerHTML+'<script>window.onload=()=>window.print()<\\/script></body></html>');w.document.close()};['printQuestions','printEntries','printResults','printAttempts'].forEach((id,i)=>{const el=$('#'+id);if(el)el.onclick=()=>printNode(['#questionList','#entryList','#resultRows','#attemptList'][i])});$('#giftForm').onsubmit=async e=>{e.preventDefault();try{const d=Object.fromEntries(new FormData(e.target));await api('/admin/rewards/award',{method:'POST',body:JSON.stringify(d)});$('#giftMsg').textContent='Gift member account-এ যোগ হয়েছে।';e.target.reset()}catch(x){$('#giftMsg').textContent=x.message}};init().catch(e=>$('#qMsg').textContent=e.message)})();
