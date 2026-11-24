@@ -30,7 +30,7 @@ module.exports=function mountExamOffice(app,pool,{admin}){
   })));
   if(!questions.length){await c.query('ROLLBACK');return res.status(400).json({error:'এই Question Paper-এ কোনো প্রশ্ন নেই।'});}
   const comp={...list[index],questions,resultMode:mode,examPaperId:String(p.id),examPaperTitle:p.title,examCategory:p.category,
-   durationMinutes:Math.max(1,Math.min(240,parseInt(String(p.duration||'').match(/\\d+/)?.[0]||'30',10))),
+   durationMinutes:Math.max(1,Math.min(240,parseInt(String(p.duration||'').match(/\d+/)?.[0]||'30',10))),
    maxAttempts:1,resultStatus:'Pending'};
   list[index]=comp;
   await c.query("UPDATE platform_state SET data=jsonb_set(data,'{competitions}',$1::jsonb,true),updated_at=NOW() WHERE id=1",[JSON.stringify(list)]);
