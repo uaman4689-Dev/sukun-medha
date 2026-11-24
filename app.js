@@ -28,7 +28,8 @@ function renderCollection(id,items,type){
   }else if(type==='challenge'&&!freeCourse){
    actions='<button class="catalog-add" data-add-type="challenge" data-add-id="'+esc(x.id)+'">Cart-এ যোগ করুন</button>';
   }
-  return '<article class="catalog-card '+(type==='course'?'course-card':'')+'">'+imageHtml+'<div class="catalog-type">'+({course:'LEARN',competition:'COMPETITION',challenge:'CHALLENGE',gift:'REWARD',offer:'SPECIAL OFFER'}[type])+'</div><h3>'+esc(x.title||x.name||'')+'</h3><p>'+esc(shortDescription)+'</p><div class="catalog-meta">'+meta+'</div>'+actions+(type==='course'?'':'<a href="'+href+'">বিস্তারিত দেখুন ↗</a>')+'</article>';
+  const prizeHtml=type==='competition'?'<div style="background:linear-gradient(120deg,#0b4b3c,#167653);color:#fff;padding:13px 15px;border-radius:11px;margin:0 0 12px"><small style="opacity:.8;font-weight:700">🏆 WINNER GIFT</small><div style="font-weight:800;margin-top:5px">'+esc((x.prizes||[]).join(' · ')||'পুরস্কার শিগগিরই ঘোষণা হবে')+'</div></div>':'';
+  return '<article class="catalog-card '+(type==='course'?'course-card':'')+'">'+prizeHtml+imageHtml+'<div class="catalog-type">'+({course:'LEARN',competition:'COMPETITION',challenge:'CHALLENGE',gift:'REWARD',offer:'SPECIAL OFFER'}[type])+'</div><h3>'+esc(x.title||x.name||'')+'</h3><p>'+esc(shortDescription)+'</p><div class="catalog-meta">'+meta+'</div>'+actions+(type==='course'?'':'<a href="'+href+'">বিস্তারিত দেখুন ↗</a>')+'</article>';
  }).join('');
 }
 document.addEventListener('click',async e=>{
