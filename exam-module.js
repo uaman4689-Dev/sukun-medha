@@ -13,4 +13,45 @@ module.exports=function mountExamOffice(app,pool,{admin}){
  app.post('/api/admin/exams/results',admin,async(req,res)=>{try{const b=req.body||{},title=clean(b.examTitle,180),category=clean(b.category,120),subjects=Array.isArray(b.subjects)?b.subjects.slice(0,40):[],students=Array.isArray(b.students)?b.students.slice(0,2000):[];if(!title||!category||!subjects.length||!students.length)return res.status(400).json({error:'পরীক্ষার নাম, বিভাগ, বিষয় ও শিক্ষার্থী যোগ করুন।'});for(const s of subjects){s.name=clean(s.name,120);s.full=Number(s.full);if(!s.name||s.full<=0)return res.status(400).json({error:'বিষয়ের নাম ও পূর্ণমান সঠিক দিন।'})}const seen=new Set();for(const st of students){st.roll=clean(st.roll,40);st.name=clean(st.name,140);if(!st.roll||!st.name)return res.status(400).json({error:'প্রতিটি শিক্ষার্থীর রোল ও নাম দিন।'});if(seen.has(st.roll))return res.status(400).json({error:'একই রোল একাধিকবার দেওয়া যাবে না।'});seen.add(st.roll);st.marks=st.marks||{};for(const s of subjects){const v=Number(st.marks[s.name]);if(!Number.isFinite(v)||v<0||v>s.full)return res.status(400).json({error:st.name+' — '+s.name+' নম্বর ০ থেকে '+s.full+' এর মধ্যে দিন।'});st.marks[s.name]=v}}const data={subjects,students};const r=await pool.query('INSERT INTO exam_result_sheets(exam_title,category,exam_date,subjects,students,note,status) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',[title,category,b.examDate||null,JSON.stringify(subjects),JSON.stringify(students),clean(b.note,1200),b.published?'Published':'Draft']);res.status(201).json({result:{...r.rows[0],ranked_students:rankStudents(data)}})}catch(e){fail(res,e)}});
  app.put('/api/admin/exams/results/:id',admin,async(req,res)=>{try{const b=req.body||{},title=clean(b.examTitle,180),category=clean(b.category,120),subjects=Array.isArray(b.subjects)?b.subjects.slice(0,40):[],students=Array.isArray(b.students)?b.students.slice(0,2000):[];if(!title||!category||!subjects.length||!students.length)return res.status(400).json({error:'পরীক্ষার নাম, বিভাগ, বিষয় ও শিক্ষার্থী যোগ করুন।'});for(const s of subjects){s.name=clean(s.name,120);s.full=Number(s.full);if(!s.name||s.full<=0)return res.status(400).json({error:'বিষয়ের পূর্ণমান সঠিক দিন।'})}const seen=new Set();for(const st of students){st.roll=clean(st.roll,40);st.name=clean(st.name,140);if(!st.roll||!st.name||seen.has(st.roll))return res.status(400).json({error:'রোল/নাম ঠিক করুন; রোল ইউনিক হতে হবে।'});seen.add(st.roll);st.marks=st.marks||{};for(const s of subjects){const v=Number(st.marks[s.name]);if(!Number.isFinite(v)||v<0||v>s.full)return res.status(400).json({error:st.name+' — '+s.name+' নম্বর সঠিক নয়।'});st.marks[s.name]=v}}const r=await pool.query('UPDATE exam_result_sheets SET exam_title=$1,category=$2,exam_date=$3,subjects=$4,students=$5,note=$6,status=$7,updated_at=NOW() WHERE id=$8 RETURNING *',[title,category,b.examDate||null,JSON.stringify(subjects),JSON.stringify(students),clean(b.note,1200),b.published?'Published':'Draft',req.params.id]);if(!r.rowCount)return res.sendStatus(404);res.json({result:{...r.rows[0],ranked_students:rankStudents({subjects,students})}})}catch(e){fail(res,e)}});
  app.delete('/api/admin/exams/results/:id',admin,async(req,res)=>{try{const r=await pool.query('DELETE FROM exam_result_sheets WHERE id=$1 RETURNING id',[req.params.id]);if(!r.rowCount)return res.sendStatus(404);res.json({ok:true})}catch(e){fail(res,e)}});
+ // Send a saved Exam & Result Office paper into a Competition without deleting the source paper.
+ app.post('/api/admin/exams/papers/:id/set-competition',admin,async(req,res)=>{const c=await pool.connect();try{
+  const mode=req.body?.mode==='spin'?'spin':'private',competitionId=clean(req.body?.competitionId,100);
+  if(!competitionId)return res.status(400).json({error:'Competition নির্বাচন করুন।'});
+  await c.query('BEGIN');
+  const paper=await c.query('SELECT * FROM exam_papers WHERE id=$1 FOR SHARE',[req.params.id]);
+  if(!paper.rowCount){await c.query('ROLLBACK');return res.sendStatus(404);}
+  const state=await c.query('SELECT data FROM platform_state WHERE id=1 FOR UPDATE');
+  const list=state.rows[0]?.data?.competitions||[],index=list.findIndex(x=>String(x.id)===competitionId);
+  if(index<0){await c.query('ROLLBACK');return res.status(404).json({error:'Competition পাওয়া যায়নি।'});}
+  const p=paper.rows[0],sections=Array.isArray(p.sections)?p.sections:[],questions=[];
+  sections.forEach((section,si)=>(section.questions||[]).forEach((q,qi)=>questions.push({
+   id:'paper'+p.id+'s'+si+'q'+qi,type:['MCQ','Written','Short Answer','True / False','Fill in the blanks'].includes(section.type)?section.type:'Written',
+   text:clean(q.text,3000),marks:Math.max(0,Number(q.marks)||1),options:Array.isArray(q.options)?q.options:[],answer:clean(q.answer,1000)
+  })));
+  if(!questions.length){await c.query('ROLLBACK');return res.status(400).json({error:'এই Question Paper-এ কোনো প্রশ্ন নেই।'});}
+  const comp={...list[index],questions,resultMode:mode,examPaperId:String(p.id),examPaperTitle:p.title,examCategory:p.category,
+   durationMinutes:Math.max(1,Math.min(240,parseInt(String(p.duration||'').match(/\\d+/)?.[0]||'30',10))),
+   maxAttempts:1,resultStatus:'Pending'};
+  list[index]=comp;
+  await c.query("UPDATE platform_state SET data=jsonb_set(data,'{competitions}',$1::jsonb,true),updated_at=NOW() WHERE id=1",[JSON.stringify(list)]);
+  await c.query('COMMIT');
+  res.json({ok:true,competition:{id:comp.id,title:comp.title,resultMode:mode,questionCount:questions.length},message:mode==='spin'?'Question Paper Competition-এ যুক্ত হয়েছে। ফলাফল Admin Spin করে প্রকাশ করবেন।':'Private Exam হিসেবে যুক্ত হয়েছে। সদস্যদের Answer Sheet Admin মূল্যায়ন করবেন।'});
+ }catch(e){await c.query('ROLLBACK');fail(res,e)}finally{c.release()}});
+ // Admin-controlled random draw for Regular / Spin competitions; result is saved as a separate published sheet.
+ app.post('/api/admin/competitions/:id/spin-result',admin,async(req,res)=>{const c=await pool.connect();try{
+  await c.query('BEGIN');
+  const state=await c.query('SELECT data FROM platform_state WHERE id=1 FOR UPDATE'),list=state.rows[0]?.data?.competitions||[],idx=list.findIndex(x=>String(x.id)===String(req.params.id));
+  if(idx<0){await c.query('ROLLBACK');return res.sendStatus(404);}
+  const comp=list[idx];
+  if(comp.resultMode!=='spin'){await c.query('ROLLBACK');return res.status(409).json({error:'এই Competition Spin Result হিসেবে সেট করা হয়নি।'});}
+  if(comp.resultStatus==='Published'&&!req.body?.reroll){await c.query('ROLLBACK');return res.status(409).json({error:'ফলাফল আগে থেকেই প্রকাশিত। নতুন করে Spin করতে চাইলে Confirm করে আবার চেষ্টা করুন।'});}
+  const count=Math.max(1,Math.min(100,Number(req.body?.winnersCount)||1));
+  const entries=await c.query("SELECT e.member_id,m.name,m.phone FROM event_entries e JOIN members m ON m.id=e.member_id WHERE e.event_type='competition' AND e.event_id=$1 ORDER BY random() LIMIT $2",[String(comp.id),count]);
+  if(!entries.rowCount){await c.query('ROLLBACK');return res.status(409).json({error:'এখনো কোনো Confirmed Participant নেই।'});}
+  const results=entries.rows.map((x,i)=>({name:x.name,roll:x.phone,score:'Selected',rank:i+1,award:i===0?'Winner':'Selected'}));
+  list[idx]={...comp,results,resultStatus:'Published',spinAt:new Date().toISOString(),spinWinners:results.length};
+  await c.query("UPDATE platform_state SET data=jsonb_set(data,'{competitions}',$1::jsonb,true),updated_at=NOW() WHERE id=1",[JSON.stringify(list)]);
+  await c.query('COMMIT');res.json({ok:true,results,message:results.length+' জনের Spin Result Sheet প্রকাশিত হয়েছে।'});
+ }catch(e){await c.query('ROLLBACK');fail(res,e)}finally{c.release()}});
+
 };
