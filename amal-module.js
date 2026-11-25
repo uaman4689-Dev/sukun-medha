@@ -4,7 +4,7 @@ module.exports=(app,pool,{member,admin})=>{
  const ensure=()=>ready||(ready=pool.query(`
  CREATE TABLE IF NOT EXISTS amal_items(
   id BIGSERIAL PRIMARY KEY,title TEXT NOT NULL,category TEXT NOT NULL DEFAULT 'অন্যান্য',
-  unit TEXT NOT NULL DEFAULT 'বার',active BOOLEAN NOT NULL DEFAULT TRUE,sort_order INTEGER NOT NULL DEFAULT 0,
+  unit TEXT NOT NULL DEFAULT 'বার',target_quantity NUMERIC(12,2) NOT NULL DEFAULT 1,active BOOLEAN NOT NULL DEFAULT TRUE,sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
  );
  CREATE TABLE IF NOT EXISTS amal_entries(
@@ -14,6 +14,7 @@ module.exports=(app,pool,{member,admin})=>{
   sadaka_amount NUMERIC(12,2) NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(member_id,item_id,entry_date)
  );
+ ALTER TABLE amal_items ADD COLUMN IF NOT EXISTS target_quantity NUMERIC(12,2) NOT NULL DEFAULT 1;
  CREATE INDEX IF NOT EXISTS idx_amal_entries_member_date ON amal_entries(member_id,entry_date DESC);
  CREATE TABLE IF NOT EXISTS amal_challenges(
   id BIGSERIAL PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',
@@ -32,30 +33,36 @@ module.exports=(app,pool,{member,admin})=>{
  CREATE INDEX IF NOT EXISTS idx_amal_challenge_member ON amal_challenge_entries(member_id,joined_at DESC);
  `).then(async()=>{
   const defaults=[
-   ['পাঁচ ওয়াক্ত নামাজ','ইবাদত','ওয়াক্ত'],['কুরআন তিলাওয়াত','কুরআন','পৃষ্ঠা'],
-   ['সকালের যিকির','যিকির','বার'],['সন্ধ্যার যিকির','যিকির','বার'],
-   ['দরুদ পাঠ','যিকির','বার'],['ইস্তিগফার','যিকির','বার'],
-   ['দোয়া','দোয়া','বার'],['সদকা','সদকা','টাকা']
+   ['পাঁচ ওয়াক্ত নামাজ','ইবাদত','ওয়াক্ত',5],
+   ['সকালের যিকির','যিকির','বার',400],
+   ['সন্ধ্যার যিকির','যিকির','বার',400],
+   ['প্রতি ওয়াক্তের পর যিকির','যিকির','বার',500],
+   ['দরুদ পাঠ','যিকির','বার',100],
+   ['দোয়া','দোয়া','বার',5],
+   ['সদকা','সদকা','টাকা',0],
+   ['তাহাজ্জুদ','ইবাদত','রাকাত',1],
+   ['দৈনিক ভালো কাজ','আখলাক','কাজ',1]
   ];
   for(let i=0;i<defaults.length;i++){
-   const [title,category,unit]=defaults[i];
-   await pool.query('INSERT INTO amal_items(title,category,unit,sort_order) SELECT $1,$2,$3,$4 WHERE NOT EXISTS(SELECT 1 FROM amal_items WHERE title=$1)',[title,category,unit,i+1]);
+   const [title,category,unit,target]=defaults[i];
+   await pool.query('INSERT INTO amal_items(title,category,unit,target_quantity,sort_order) SELECT $1,$2,$3,$4,$5 WHERE NOT EXISTS(SELECT 1 FROM amal_items WHERE title=$1)',[title,category,unit,target,i+1]);
+   await pool.query('UPDATE amal_items SET category=$2,unit=$3,target_quantity=$4,active=TRUE WHERE title=$1',[title,category,unit,target]);
   }
  }).catch(e=>{ready=null;throw e}));
  const fail=(res,e)=>{console.error('Amal tracker:',e);res.status(500).json({error:'তথ্য লোড বা সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।'})};
  app.get('/api/amal/config',async(req,res)=>{try{await ensure();const [items,challenges]=await Promise.all([
-  pool.query('SELECT id,title,category,unit FROM amal_items WHERE active=TRUE ORDER BY sort_order,id'),
+  pool.query('SELECT id,title,category,unit,target_quantity FROM amal_items WHERE active=TRUE ORDER BY sort_order,id'),
   pool.query("SELECT id,title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label FROM amal_challenges WHERE active=TRUE AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date ORDER BY start_date,id")
  ]);res.json({items:items.rows,challenges:challenges.rows})}catch(e){fail(res,e)}});
  app.get('/api/amal/me',member,async(req,res)=>{try{
   await ensure();const month=/^\d{4}-\d{2}$/.test(req.query.month||'')?req.query.month:new Date().toISOString().slice(0,7);
   const from=month+'-01';
   const [items,challenges,joined,rank]=await Promise.all([
-   pool.query('SELECT id,title,category,unit FROM amal_items WHERE active=TRUE ORDER BY sort_order,id'),
+   pool.query('SELECT id,title,category,unit,target_quantity FROM amal_items WHERE active=TRUE ORDER BY sort_order,id'),
    pool.query("SELECT id,title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label FROM amal_challenges WHERE (active=TRUE AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date) OR id IN (SELECT challenge_id FROM amal_challenge_entries WHERE member_id=$1) ORDER BY start_date,id",[req.user.id]),
    pool.query(`SELECT ce.challenge_id,ce.status,ce.reward_status,c.title AS challenge_title,c.reward_type,c.reward_value,c.reward_label,COALESCE(p.progress_days,0)::int AS progress_days FROM amal_challenge_entries ce JOIN amal_challenges c ON c.id=ce.challenge_id LEFT JOIN LATERAL (SELECT COUNT(DISTINCT e.entry_date)::int AS progress_days FROM amal_entries e JOIN amal_items i ON i.id=e.item_id WHERE e.member_id=ce.member_id AND e.entry_date BETWEEN c.start_date AND LEAST(c.end_date,(NOW() AT TIME ZONE 'Asia/Dhaka')::date) AND e.completed=TRUE AND (c.target_category='সব আমল' OR i.category=c.target_category)) p ON TRUE WHERE ce.member_id=$1`,[req.user.id]),
    pool.query(`SELECT m.name,COUNT(DISTINCT e.entry_date)::int AS active_days,
-    ROUND(100.0*COUNT(*) FILTER(WHERE e.completed)/NULLIF(COUNT(DISTINCT e.entry_date)*(SELECT COUNT(*) FROM amal_items WHERE active=TRUE),0))::int AS score
+    ROUND(100.0*SUM(CASE WHEN i.category='সদকা' OR i.target_quantity=0 THEN 0 ELSE LEAST(1.0,COALESCE(e.quantity,0)/NULLIF(i.target_quantity,0)) END)/NULLIF(COUNT(DISTINCT e.entry_date)*(SELECT COUNT(*) FROM amal_items WHERE active=TRUE AND category<>'সদকা' AND target_quantity>0),0))::int AS score
     FROM amal_entries e JOIN members m ON m.id=e.member_id
     WHERE e.entry_date >= $1::date AND e.entry_date < ($1::date + INTERVAL '1 month')
     GROUP BY m.id,m.name ORDER BY score DESC,active_days DESC LIMIT 10`,[from])
@@ -68,13 +75,13 @@ module.exports=(app,pool,{member,admin})=>{
   await ensure();const {itemId,date,completed,quantity,sadakaAmount}=req.body||{};
   if(!itemId||!/^\d+$/.test(String(itemId))||!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return res.status(400).json({error:'আমল ও তারিখ নির্বাচন করুন।'});
   const future=await pool.query("SELECT $1::date>(NOW() AT TIME ZONE 'Asia/Dhaka')::date AS future",[date]);if(future.rows[0].future)return res.status(400).json({error:'ভবিষ্যতের তারিখে আমল জমা দেওয়া যাবে না।'});
-  const item=await pool.query('SELECT id,category FROM amal_items WHERE id=$1 AND active=TRUE',[itemId]);if(!item.rowCount)return res.status(404).json({error:'আমলটি পাওয়া যায়নি।'});
+  const item=await pool.query('SELECT id,category,target_quantity FROM amal_items WHERE id=$1 AND active=TRUE',[itemId]);if(!item.rowCount)return res.status(404).json({error:'আমলটি পাওয়া যায়নি।'});
   const q=Math.max(0,Math.min(1000000,Number(quantity)||0)),sadaka=Math.max(0,Math.min(100000000,Number(sadakaAmount)||0));
   const r=await pool.query(`INSERT INTO amal_entries(member_id,item_id,entry_date,completed,quantity,sadaka_amount)
    VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(member_id,item_id,entry_date)
    DO UPDATE SET completed=EXCLUDED.completed,quantity=EXCLUDED.quantity,sadaka_amount=EXCLUDED.sadaka_amount,updated_at=NOW()
    RETURNING item_id,TO_CHAR(entry_date,'YYYY-MM-DD') AS entry_date,completed,quantity,sadaka_amount`,
-   [req.user.id,itemId,date,!!completed,q,sadaka]);
+   [req.user.id,itemId,date,!!completed||q>=Number(item.rows[0].target_quantity||1),q,sadaka]);
   res.json({entry:r.rows[0]});
  }catch(e){fail(res,e)}});
  app.post('/api/amal/challenges/:id/join',member,async(req,res)=>{try{
@@ -102,8 +109,8 @@ module.exports=(app,pool,{member,admin})=>{
    pool.query(`SELECT COUNT(*)::int AS members,(SELECT COUNT(*)::int FROM amal_entries WHERE entry_date=(NOW() AT TIME ZONE 'Asia/Dhaka')::date) AS today_entries,(SELECT COUNT(*)::int FROM amal_challenge_entries) AS challenge_joins FROM members`)
   ]);res.json({items:items.rows,challenges:challenges.rows,entries:entries.rows,stats:stats.rows[0]});
  }catch(e){fail(res,e)}});
- app.post('/api/admin/amal/items',admin,async(req,res)=>{try{await ensure();const {title,category,unit}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'আমলের নাম লিখুন।'});const r=await pool.query('INSERT INTO amal_items(title,category,unit,sort_order) VALUES($1,$2,$3,COALESCE((SELECT MAX(sort_order)+1 FROM amal_items),1)) RETURNING *',[String(title).trim(),String(category||'অন্যান্য').trim(),String(unit||'বার').trim()]);res.json({item:r.rows[0]})}catch(e){fail(res,e)}});
- app.put('/api/admin/amal/items/:id',admin,async(req,res)=>{try{await ensure();const {title,category,unit,active,sortOrder}=req.body||{};const r=await pool.query('UPDATE amal_items SET title=COALESCE($2,title),category=COALESCE($3,category),unit=COALESCE($4,unit),active=COALESCE($5,active),sort_order=COALESCE($6,sort_order) WHERE id=$1 RETURNING *',[req.params.id,title,category,unit,typeof active==='boolean'?active:null,sortOrder]);if(!r.rowCount)return res.sendStatus(404);res.json({item:r.rows[0]})}catch(e){fail(res,e)}});
+ app.post('/api/admin/amal/items',admin,async(req,res)=>{try{await ensure();const {title,category,unit}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'আমলের নাম লিখুন।'});const r=await pool.query('INSERT INTO amal_items(title,category,unit,target_quantity,sort_order) VALUES($1,$2,$3,$4,COALESCE((SELECT MAX(sort_order)+1 FROM amal_items),1)) RETURNING *',[String(title).trim(),String(category||'অন্যান্য').trim(),String(unit||'বার').trim(),Math.max(0,Number(req.body.targetQuantity)||1)]);res.json({item:r.rows[0]})}catch(e){fail(res,e)}});
+ app.put('/api/admin/amal/items/:id',admin,async(req,res)=>{try{await ensure();const {title,category,unit,active,sortOrder,targetQuantity}=req.body||{};const r=await pool.query('UPDATE amal_items SET title=COALESCE($2,title),category=COALESCE($3,category),unit=COALESCE($4,unit),active=COALESCE($5,active),sort_order=COALESCE($6,sort_order),target_quantity=COALESCE($7,target_quantity) WHERE id=$1 RETURNING *',[req.params.id,title,category,unit,typeof active==='boolean'?active:null,sortOrder,targetQuantity]);if(!r.rowCount)return res.sendStatus(404);res.json({item:r.rows[0]})}catch(e){fail(res,e)}});
  app.delete('/api/admin/amal/items/:id',admin,async(req,res)=>{try{await ensure();await pool.query('DELETE FROM amal_items WHERE id=$1',[req.params.id]);res.json({ok:true})}catch(e){fail(res,e)}});
  app.post('/api/admin/amal/challenges',admin,async(req,res)=>{try{await ensure();const b=req.body||{};if(!String(b.title||'').trim()||!b.startDate||!b.endDate)return res.status(400).json({error:'চ্যালেঞ্জের নাম ও সময়সীমা দিন।'});const r=await pool.query(`INSERT INTO amal_challenges(title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label,active)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,[String(b.title).trim(),String(b.description||''),b.startDate,b.endDate,Math.max(1,Number(b.targetDays)||7),String(b.targetCategory||'সব আমল'),['coins','gift','certificate','none'].includes(b.rewardType)?b.rewardType:'none',Math.max(0,Number(b.rewardValue)||0),String(b.rewardLabel||''),b.active!==false]);res.json({challenge:r.rows[0]})}catch(e){fail(res,e)}});
