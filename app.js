@@ -4,6 +4,25 @@ if(toggle&&nav){toggle.addEventListener('click',()=>{const open=nav.classList.to
 document.querySelectorAll('a[href^="#"]').forEach(link=>link.addEventListener('click',event=>{const target=document.querySelector(link.getAttribute('href'));if(target){event.preventDefault();target.scrollIntoView({behavior:'smooth',block:'start'});}}));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=s=>{try{const u=new URL(s,location.href);return ['http:','https:'].includes(u.protocol)?u.href:'#'}catch{return '#'}};
+function competitionTimeLeft(c){
+ const raw=c.deadline||c.endDate||'';
+ if(!raw)return '';
+ const end=new Date(/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)?raw+'T23:59:59':raw).getTime();
+ if(!Number.isFinite(end))return '';
+ const left=end-Date.now();
+ if(left<=0)return '<span class="competition-countdown is-ended">সময় শেষ</span>';
+ const totalHours=Math.floor(left/3600000),days=Math.floor(totalHours/24),hours=totalHours%24;
+ const bn=n=>String(n).replace(/\\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
+ return '<span class="competition-countdown" data-countdown="'+end+'">⏳ '+(days?bn(days)+' দিন ':'')+bn(hours)+' ঘণ্টা বাকি</span>';
+}
+function refreshCompetitionTimers(){
+ document.querySelectorAll('[data-countdown]').forEach(el=>{
+  const left=Number(el.dataset.countdown)-Date.now();
+  if(left<=0){el.textContent='সময় শেষ';el.classList.add('is-ended');return}
+  const h=Math.floor(left/3600000),d=Math.floor(h/24),r=h%24,bn=n=>String(n).replace(/\\d/g,x=>'০১২৩৪৫৬৭৮৯'[Number(x)]);
+  el.textContent='⏳ '+(d?bn(d)+' দিন ':'')+bn(r)+' ঘণ্টা বাকি';
+ });
+}
 function renderCollection(id,items,type){
  const host=document.getElementById(id);if(!host)return;
  const seenIds=new Set(),seenTitles=new Set(),unique=[];(items||[]).forEach(x=>{if(type!=='course'){unique.push(x);return}const id=String(x.id||'').trim(),title=String(x.title||x.name||'').trim().toLocaleLowerCase('bn').replace(/\s+/g,' ');if((id&&seenIds.has(id))||(title&&seenTitles.has(title)))return;if(id)seenIds.add(id);if(title)seenTitles.add(title);unique.push(x)});
@@ -29,7 +48,7 @@ function renderCollection(id,items,type){
    actions='<button class="catalog-add" data-add-type="challenge" data-add-id="'+esc(x.id)+'">Cart-এ যোগ করুন</button>';
   }
   const prizeHtml=type==='competition'?(()=>{const gifts=x.prizes||[],places=[{n:'১ম স্থান',e:'🏆',c:'#f5ca68',t:'#49300b',tag:'GRAND PRIZE'},{n:'২য় স্থান',e:'🥈',c:'#cbd8e8',t:'#26384a',tag:'SILVER PRIZE'},{n:'৩য় স্থান',e:'🥉',c:'#c98a61',t:'#fff8f1',tag:'BRONZE PRIZE'}];return '<section style="background:radial-gradient(circle at 50% 0%,#294d70,#101f3c 70%);color:#fff;padding:15px;border-radius:15px;margin:0 0 13px;border:1px solid #8ac7f044;box-shadow:0 12px 28px #08152d22"><div style="text-align:center;margin-bottom:12px"><small style="color:#8be6ff;font-size:9px;font-weight:900;letter-spacing:2px">✦ WINNER PODIUM ✦</small><div style="font-size:17px;font-weight:950;letter-spacing:1px;margin-top:3px">🏆 Winner Gifts</div></div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;align-items:stretch">'+(gifts.slice(0,3).map((gift,i)=>{const p=places[i];return '<div style="min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:5px;padding:10px 5px;border-radius:11px;background:'+p.c+';color:'+p.t+';border:1px solid #ffffff88;'+(i===0?'transform:translateY(-3px);box-shadow:0 6px 15px #f5ca6840;':'')+'"><span style="font-size:23px">'+p.e+'</span><b style="font-size:11px;line-height:1.3">'+p.n+'</b><span style="font-size:10px;font-weight:800;line-height:1.35;overflow-wrap:anywhere">'+esc(gift)+'</span><small style="font-size:7px;font-weight:950;letter-spacing:.5px;opacity:.8">'+p.tag+'</small></div>'}).join('')||'<div style="grid-column:1/-1;text-align:center;color:#c8d9ef;padding:12px;font-size:12px">পুরস্কার শিগগিরই ঘোষণা হবে</div>')+'</div>'+(gifts.length>3?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">'+gifts.slice(3).map((gift,i)=>'<span style="background:#ffffff18;border:1px solid #ffffff30;border-radius:20px;padding:5px 9px;font-size:10px">🎁 '+(i+4)+'তম: '+esc(gift)+'</span>').join('')+'</div>':'')+'</section>'})():'';
-  return '<article class="catalog-card '+(type==='course'?'course-card':'')+'">'+prizeHtml+imageHtml+'<div class="catalog-type">'+({course:'LEARN',competition:'COMPETITION',challenge:'CHALLENGE',gift:'REWARD',offer:'SPECIAL OFFER'}[type])+'</div><h3>'+esc(x.title||x.name||'')+'</h3><p>'+esc(shortDescription)+'</p><div class="catalog-meta">'+meta+'</div>'+actions+(type==='course'?'':'<a href="'+href+'">বিস্তারিত দেখুন ↗</a>')+'</article>';
+  return '<article class="catalog-card '+(type==='course'?'course-card':'')+'">'+prizeHtml+imageHtml+'<div class="catalog-type">'+({course:'LEARN',competition:'COMPETITION',challenge:'CHALLENGE',gift:'REWARD',offer:'SPECIAL OFFER'}[type])+'</div><h3>'+esc(x.title||x.name||'')+'</h3>'+(type==='competition'?competitionTimeLeft(x):'')+'<p>'+esc(shortDescription)+'</p><div class="catalog-meta">'+meta+'</div>'+actions+(type==='course'?'':'<a href="'+href+'">বিস্তারিত দেখুন ↗</a>')+'</article>';
  }).join('');
 }
 document.addEventListener('click',async e=>{
@@ -83,6 +102,7 @@ async function loadHome(){
  }catch(e){console.warn('Public content could not be loaded',e);}
 }
 loadHome();
+setInterval(refreshCompetitionTimers,60000);
 // Homepage search: filter visible cards across the main discovery sections.
 (()=>{const input=document.getElementById('siteSearch');if(!input)return;input.addEventListener('input',()=>{const q=input.value.trim().toLocaleLowerCase('bn');document.querySelectorAll('#competitions .catalog-card,#learn .catalog-card,#challenges .catalog-card,#offers .catalog-card,#winners .winner-card,#quizzes .quiz-categories a').forEach(card=>{card.hidden=!!q&&!card.textContent.toLocaleLowerCase('bn').includes(q)});});})();
 
