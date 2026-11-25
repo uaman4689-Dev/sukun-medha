@@ -31,6 +31,7 @@ document.addEventListener('submit',async e=>{const f=e.target.closest('form[data
 const hubEsc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let hubCompetitions=[],hubExamFilter='all';
 function openMemberHub(which){
+ if(which==='amal'&&window.matchMedia('(min-width: 761px)').matches){location.href='/amal.html';return}
  const ids={amal:'#amalHubPanel',reading:'#readingHubPanel',exam:'#examHubPanel'},panel=$(ids[which]);if(!panel)return;
  const wasOpen=!panel.classList.contains('hidden');Object.values(ids).forEach(id=>$(id).classList.add('hidden'));document.querySelectorAll('[data-open-hub]').forEach(b=>b.classList.remove('active'));
  panel.classList.toggle('hidden',wasOpen);const btn=document.querySelector('[data-open-hub="'+which+'"]');if(btn)btn.classList.toggle('active',!wasOpen);
