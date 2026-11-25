@@ -50,9 +50,8 @@ module.exports=(app,pool,{member,admin})=>{
  app.get('/api/amal/me',member,async(req,res)=>{try{
   await ensure();const month=/^\d{4}-\d{2}$/.test(req.query.month||'')?req.query.month:new Date().toISOString().slice(0,7);
   const from=month+'-01';
-  const [items,entries,challenges,joined,rank]=await Promise.all([
+  const [items,challenges,joined,rank]=await Promise.all([
    pool.query('SELECT id,title,category,unit FROM amal_items WHERE active=TRUE ORDER BY sort_order,id'),
-   pool.query("SELECT e.item_id,e.to_char_dummy FROM amal_entries e WHERE FALSE"),
    pool.query("SELECT id,title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label FROM amal_challenges WHERE active=TRUE AND end_date>=CURRENT_DATE ORDER BY start_date,id"),
    pool.query('SELECT challenge_id,status,reward_status FROM amal_challenge_entries WHERE member_id=$1',[req.user.id]),
    pool.query(\`SELECT m.name,COUNT(DISTINCT e.entry_date)::int AS active_days,
