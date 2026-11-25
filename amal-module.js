@@ -63,7 +63,7 @@ module.exports=(app,pool,{member,admin})=>{
    pool.query(`SELECT ce.challenge_id,ce.status,ce.reward_status,c.title AS challenge_title,c.reward_type,c.reward_value,c.reward_label,COALESCE(p.progress_days,0)::int AS progress_days FROM amal_challenge_entries ce JOIN amal_challenges c ON c.id=ce.challenge_id LEFT JOIN LATERAL (SELECT COUNT(DISTINCT e.entry_date)::int AS progress_days FROM amal_entries e JOIN amal_items i ON i.id=e.item_id WHERE e.member_id=ce.member_id AND e.entry_date BETWEEN c.start_date AND LEAST(c.end_date,(NOW() AT TIME ZONE 'Asia/Dhaka')::date) AND e.completed=TRUE AND (c.target_category='সব আমল' OR i.category=c.target_category)) p ON TRUE WHERE ce.member_id=$1`,[req.user.id]),
    pool.query(`SELECT m.name,COUNT(DISTINCT e.entry_date)::int AS active_days,
     ROUND(100.0*SUM(CASE WHEN i.category='সদকা' OR i.target_quantity=0 THEN 0 ELSE LEAST(1.0,COALESCE(e.quantity,0)/NULLIF(i.target_quantity,0)) END)/NULLIF(COUNT(DISTINCT e.entry_date)*(SELECT COUNT(*) FROM amal_items WHERE active=TRUE AND category<>'সদকা' AND target_quantity>0),0))::int AS score
-    FROM amal_entries e JOIN members m ON m.id=e.member_id
+    FROM amal_entries e JOIN members m ON m.id=e.member_id JOIN amal_items i ON i.id=e.item_id
     WHERE e.entry_date >= $1::date AND e.entry_date < ($1::date + INTERVAL '1 month')
     GROUP BY m.id,m.name ORDER BY score DESC,active_days DESC LIMIT 10`,[from])
   ]);
