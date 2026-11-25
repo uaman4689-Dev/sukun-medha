@@ -78,7 +78,7 @@ module.exports=(app,pool,{member,admin})=>{
   res.json({entry:r.rows[0]});
  }catch(e){fail(res,e)}});
  app.post('/api/amal/challenges/:id/join',member,async(req,res)=>{try{
-  await ensure();const c=await pool.query(`SELECT id FROM amal_challenges WHERE id=$1 AND active=TRUE AND start_date<=(NOW() AT TIME ZONE 'Asia/Dhaka')::date AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date`,[req.params.id]);
+  await ensure();const c=await pool.query(`SELECT id FROM amal_challenges WHERE id=$1 AND active=TRUE AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date`,[req.params.id]);
   if(!c.rowCount)return res.status(404).json({error:'এই চ্যালেঞ্জে এখন যোগ দেওয়া যাচ্ছে না।'});
   const r=await pool.query('INSERT INTO amal_challenge_entries(challenge_id,member_id) VALUES($1,$2) ON CONFLICT(challenge_id,member_id) DO NOTHING RETURNING id',[req.params.id,req.user.id]);
   res.json({ok:true,joined:true});
