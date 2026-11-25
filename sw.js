@@ -1,4 +1,4 @@
-const CACHE = 'sukun-medha-shell-v6';
+const CACHE = 'sukun-medha-shell-v7';
 const CORE = [
   '/', '/index.html', '/member.html', '/amal.html',
   '/style.css', '/app.js', '/member.js', '/amal.css', '/amal.js',
