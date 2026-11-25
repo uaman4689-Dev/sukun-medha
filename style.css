@@ -96,3 +96,10 @@
 .competition-fee-cash small,.competition-fee-coin small{font-size:9px;font-weight:900;letter-spacing:1px;opacity:.82;line-height:1.2;}
 .competition-fee-cash strong,.competition-fee-coin strong{font-size:19px;font-weight:950;line-height:1.15;overflow-wrap:anywhere;}
 @media(max-width:390px){.competition-fee-row{gap:7px}.competition-fee-cash,.competition-fee-coin{min-height:70px;padding:9px 5px}.competition-fee-cash strong,.competition-fee-coin strong{font-size:17px}}
+
+/* Final fee layout: two equal panels, label left and amount right */
+.competition-card .competition-fee-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;width:100%;}
+.competition-card .competition-fee-cash,.competition-card .competition-fee-coin{display:flex!important;flex-direction:row!important;justify-content:space-between!important;align-items:center!important;text-align:left!important;gap:7px!important;min-width:0;min-height:64px;padding:11px 12px!important;border-radius:12px!important;}
+.competition-card .competition-fee-cash small,.competition-card .competition-fee-coin small{font-size:9px!important;line-height:1.3;letter-spacing:.6px;}
+.competition-card .competition-fee-cash strong,.competition-card .competition-fee-coin strong{font-size:17px!important;white-space:nowrap;}
+@media(max-width:390px){.competition-card .competition-fee-row{gap:7px!important}.competition-card .competition-fee-cash,.competition-card .competition-fee-coin{padding:9px 8px!important;gap:4px!important}.competition-card .competition-fee-cash small,.competition-card .competition-fee-coin small{font-size:8px!important}.competition-card .competition-fee-cash strong,.competition-card .competition-fee-coin strong{font-size:15px!important}}
