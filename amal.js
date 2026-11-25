@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const $=s=>document.querySelector(s),K='sm_member_token',SNAP='sm_amal_snapshot_v1',QUEUE='sm_amal_queue_v1';
+const $=s=>document.querySelector(s),K='sm_member_token',SNAP='sm_amal_snapshot_'+(token?token.slice(-16):'guest'),QUEUE='sm_amal_queue_'+(token?token.slice(-16):'guest');
 let token=localStorage.getItem(K),state={items:[],entries:[],challenges:[],joined:[],leaderboard:[]},dirty=false;
 const localDate=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const monthNow=()=>localDate().slice(0,7),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
