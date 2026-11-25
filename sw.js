@@ -1,8 +1,9 @@
-const CACHE = 'sukun-medha-shell-v7';
+const CACHE = 'sukun-medha-shell-v8';
 const CORE = [
   '/', '/index.html', '/member.html', '/amal.html',
   '/style.css', '/app.js', '/member.js', '/amal.css', '/amal.js',
-  '/pwa.js', '/manifest.webmanifest', '/icons/sukun-medha.svg'
+  '/pwa.js', '/manifest.webmanifest', '/icons/sukun-medha.svg',
+  '/competition-exam.html', '/competition-exam.js', '/competition.html', '/competition.js'
 ];
 
 self.addEventListener('install', event => {
