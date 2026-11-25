@@ -9,16 +9,16 @@ function competitionTimeLeft(c){
  const base='display:block;width:100%;box-sizing:border-box;margin:10px 0 13px;padding:10px 12px;border:1px solid #c8e5d2;border-radius:12px;background:linear-gradient(110deg,#edf8f0,#f8fcf8);color:#145b3c;font-size:13px;font-weight:800;line-height:1.5';
  if(!raw)return '<div class="competition-countdown" style="'+base+'">⏳ শেষ তারিখ নির্ধারিত হয়নি</div>';
  const value=String(raw).trim();
- const end=new Date(/^\\d{4}-\\d{2}-\\d{2}$/.test(value)?value+'T23:59:59+06:00':value).getTime();
+ const end=new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)?value+'T23:59:59+06:00':value).getTime();
  if(!Number.isFinite(end))return '<div class="competition-countdown" style="'+base+'">⏳ শেষ তারিখ পড়া যাচ্ছে না</div>';
  const left=end-Date.now();
  if(left<=0)return '<div class="competition-countdown is-ended" style="'+base+';background:#fff1ed;border-color:#f2d1c7;color:#a33b2e">⌛ প্রতিযোগিতার সময় শেষ</div>';
- const bn=n=>String(n).replace(/\\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
+ const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
  return '<div class="competition-countdown" data-countdown="'+end+'" style="'+base+'">⏳ প্রতিযোগিতা শেষ হতে বাকি: '+formatCompetitionTime(left)+'</div>';
 }
 function formatCompetitionTime(left){
  const total=Math.max(0,Math.floor(left/1000)),days=Math.floor(total/86400),hours=Math.floor(total%86400/3600),minutes=Math.floor(total%3600/60),seconds=total%60;
- const bn=n=>String(n).replace(/\\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
+ const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
  return (days?bn(days)+' দিন ':'')+bn(hours)+' ঘণ্টা '+bn(minutes)+' মিনিট '+bn(seconds)+' সেকেন্ড';
 }
 function refreshCompetitionTimers(){
