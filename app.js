@@ -7,19 +7,19 @@ const safeUrl=s=>{try{const u=new URL(s,location.href);return ['http:','https:']
 function competitionTimeLeft(c){
  const raw=c.deadline||c.endDate||'';
  if(!raw)return '';
- const end=new Date(/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)?raw+'T23:59:59':raw).getTime();
+ const end=new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw)?raw+'T23:59:59':raw).getTime();
  if(!Number.isFinite(end))return '';
  const left=end-Date.now();
  if(left<=0)return '<span class="competition-countdown is-ended">সময় শেষ</span>';
  const totalHours=Math.floor(left/3600000),days=Math.floor(totalHours/24),hours=totalHours%24;
- const bn=n=>String(n).replace(/\\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
+ const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
  return '<span class="competition-countdown" data-countdown="'+end+'">⏳ '+(days?bn(days)+' দিন ':'')+bn(hours)+' ঘণ্টা বাকি</span>';
 }
 function refreshCompetitionTimers(){
  document.querySelectorAll('[data-countdown]').forEach(el=>{
   const left=Number(el.dataset.countdown)-Date.now();
   if(left<=0){el.textContent='সময় শেষ';el.classList.add('is-ended');return}
-  const h=Math.floor(left/3600000),d=Math.floor(h/24),r=h%24,bn=n=>String(n).replace(/\\d/g,x=>'০১২৩৪৫৬৭৮৯'[Number(x)]);
+  const h=Math.floor(left/3600000),d=Math.floor(h/24),r=h%24,bn=n=>String(n).replace(/\d/g,x=>'০১২৩৪৫৬৭৮৯'[Number(x)]);
   el.textContent='⏳ '+(d?bn(d)+' দিন ':'')+bn(r)+' ঘণ্টা বাকি';
  });
 }
