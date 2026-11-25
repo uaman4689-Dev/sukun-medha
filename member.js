@@ -31,10 +31,10 @@ document.addEventListener('submit',async e=>{const f=e.target.closest('form[data
 const hubEsc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let hubCompetitions=[],hubExamFilter='all';
 function openMemberHub(which){
- const reading=which==='reading',panel=$(reading?'#readingHubPanel':'#examHubPanel'),other=$(reading?'#examHubPanel':'#readingHubPanel');
- const btn=document.querySelector('[data-open-hub="'+which+'"]'),otherBtn=document.querySelector('[data-open-hub="'+(reading?'exam':'reading')+'"]');
- const wasOpen=!panel.classList.contains('hidden');panel.classList.toggle('hidden',wasOpen);other.classList.add('hidden');btn.classList.toggle('active',!wasOpen);otherBtn.classList.remove('active');
- if(!wasOpen){panel.scrollIntoView({behavior:'smooth',block:'nearest'});if(reading)loadMemberReadingRoom();else loadMemberCompetitions()}
+ const ids={amal:'#amalHubPanel',reading:'#readingHubPanel',exam:'#examHubPanel'},panel=$(ids[which]);if(!panel)return;
+ const wasOpen=!panel.classList.contains('hidden');Object.values(ids).forEach(id=>$(id).classList.add('hidden'));document.querySelectorAll('[data-open-hub]').forEach(b=>b.classList.remove('active'));
+ panel.classList.toggle('hidden',wasOpen);const btn=document.querySelector('[data-open-hub="'+which+'"]');if(btn)btn.classList.toggle('active',!wasOpen);
+ if(!wasOpen){panel.scrollIntoView({behavior:'smooth',block:'nearest'});if(which==='amal'){const frame=$('#amalProfileFrame');if(!frame.src)frame.src='/amal.html?embed=1'}else if(which==='reading')loadMemberReadingRoom();else loadMemberCompetitions()}
 }
 document.querySelectorAll('[data-open-hub]').forEach(b=>b.addEventListener('click',()=>openMemberHub(b.dataset.openHub)));
 async function loadMemberReadingRoom(){
