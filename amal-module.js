@@ -60,8 +60,9 @@ module.exports=(app,pool,{member,admin})=>{
     WHERE e.entry_date >= $1::date AND e.entry_date < ($1::date + INTERVAL '1 month')
     GROUP BY m.id,m.name ORDER BY score DESC,active_days DESC LIMIT 10`,[from])
   ]);
+  const profile=await pool.query('SELECT name FROM members WHERE id=$1',[req.user.id]);
   const logs=await pool.query("SELECT item_id,TO_CHAR(entry_date,'YYYY-MM-DD') AS entry_date,completed,quantity,sadaka_amount FROM amal_entries WHERE member_id=$1 AND entry_date >= $2::date AND entry_date < ($2::date + INTERVAL '1 month') ORDER BY entry_date,item_id",[req.user.id,from]);
-  res.json({month,items:items.rows,entries:logs.rows,challenges:challenges.rows,joined:joined.rows,leaderboard:rank.rows});
+  res.json({month,memberName:profile.rows[0]?.name||'SUKUN MEDHA Member',items:items.rows,entries:logs.rows,challenges:challenges.rows,joined:joined.rows,leaderboard:rank.rows});
  }catch(e){fail(res,e)}});
  app.post('/api/amal/entry',member,async(req,res)=>{try{
   await ensure();const {itemId,date,completed,quantity,sadakaAmount}=req.body||{};
