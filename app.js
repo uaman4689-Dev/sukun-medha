@@ -6,23 +6,26 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const safeUrl=s=>{try{const u=new URL(s,location.href);return ['http:','https:'].includes(u.protocol)?u.href:'#'}catch{return '#'}};
 function competitionTimeLeft(c){
  const raw=c.deadline||c.endDate||c.end_date||c.endAt||c.end_at||c.registrationDeadline||'';
- const base='display:block;width:fit-content;max-width:100%;box-sizing:border-box;margin:8px 0 12px;padding:8px 12px;border:1px solid #c8e5d2;border-radius:10px;background:#edf8f0;color:#145b3c;font-size:13px;font-weight:800;line-height:1.5';
+ const base='display:block;width:100%;box-sizing:border-box;margin:10px 0 13px;padding:10px 12px;border:1px solid #c8e5d2;border-radius:12px;background:linear-gradient(110deg,#edf8f0,#f8fcf8);color:#145b3c;font-size:13px;font-weight:800;line-height:1.5';
  if(!raw)return '<div class="competition-countdown" style="'+base+'">⏳ শেষ তারিখ নির্ধারিত হয়নি</div>';
  const value=String(raw).trim();
- const end=new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)?value+'T23:59:59+06:00':value).getTime();
+ const end=new Date(/^\\d{4}-\\d{2}-\\d{2}$/.test(value)?value+'T23:59:59+06:00':value).getTime();
  if(!Number.isFinite(end))return '<div class="competition-countdown" style="'+base+'">⏳ শেষ তারিখ পড়া যাচ্ছে না</div>';
  const left=end-Date.now();
  if(left<=0)return '<div class="competition-countdown is-ended" style="'+base+';background:#fff1ed;border-color:#f2d1c7;color:#a33b2e">⌛ প্রতিযোগিতার সময় শেষ</div>';
- const totalHours=Math.floor(left/3600000),days=Math.floor(totalHours/24),hours=totalHours%24;
- const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
- return '<div class="competition-countdown" data-countdown="'+end+'" style="'+base+'">⏳ প্রতিযোগিতা শেষ হতে বাকি: '+(days?bn(days)+' দিন ':'')+bn(hours)+' ঘণ্টা</div>';
+ const bn=n=>String(n).replace(/\\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
+ return '<div class="competition-countdown" data-countdown="'+end+'" style="'+base+'">⏳ প্রতিযোগিতা শেষ হতে বাকি: '+formatCompetitionTime(left)+'</div>';
+}
+function formatCompetitionTime(left){
+ const total=Math.max(0,Math.floor(left/1000)),days=Math.floor(total/86400),hours=Math.floor(total%86400/3600),minutes=Math.floor(total%3600/60),seconds=total%60;
+ const bn=n=>String(n).replace(/\\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
+ return (days?bn(days)+' দিন ':'')+bn(hours)+' ঘণ্টা '+bn(minutes)+' মিনিট '+bn(seconds)+' সেকেন্ড';
 }
 function refreshCompetitionTimers(){
  document.querySelectorAll('[data-countdown]').forEach(el=>{
   const left=Number(el.dataset.countdown)-Date.now();
-  if(left<=0){el.textContent='সময় শেষ';el.classList.add('is-ended');return}
-  const h=Math.floor(left/3600000),d=Math.floor(h/24),r=h%24,bn=n=>String(n).replace(/\d/g,x=>'০১২৩৪৫৬৭৮৯'[Number(x)]);
-  el.textContent='⏳ '+(d?bn(d)+' দিন ':'')+bn(r)+' ঘণ্টা বাকি';
+  if(left<=0){el.textContent='⌛ প্রতিযোগিতার সময় শেষ';el.classList.add('is-ended');return}
+  el.textContent='⏳ '+formatCompetitionTime(left)+' বাকি';
  });
 }
 function renderCollection(id,items,type){
@@ -34,7 +37,7 @@ function renderCollection(id,items,type){
   const regular=Number(x.regularPrice??x.price??0),offer=Number(x.offerPrice||0),hasOffer=offer>0&&offer<regular;
   const discountPercent=hasOffer&&regular>0?Math.round((regular-offer)*100/regular):0;
   const meta=type==='course'?(freeCourse?'<span class="course-free-label">FREE · সবার জন্য উন্মুক্ত</span>':(hasOffer?'<span class="course-price-current">৳ '+esc(offer)+'</span> <del class="course-price-old">৳ '+esc(regular)+'</del>':'<span class="course-price-current">৳ '+esc(regular)+'</span>')+(Number(x.coinPrice)>0?' <span class="course-coin-price">· '+esc(x.coinPrice)+' কয়েন</span>':''))
-   :type==='competition'?'Entry Fee: ৳ '+esc(x.fee||0)+' · '+esc(x.coinPrice||0)+' Coin'+((x.prizes||[]).length?' · Prize: '+esc((x.prizes||[]).join(', ')):''):type==='challenge'?'Entry: ৳ '+esc(x.fee||0)+' · '+esc(x.coinPrice||0)+' কয়েন':type==='gift'?'পুরস্কার: '+esc(x.quantity||''):esc(x.discountText||x.code||'বিশেষ অফার');
+   :type==='competition'?'<div class="competition-fee-row"><span class="competition-fee-cash">৳ '+esc(x.fee||0)+' <small>Entry Fee</small></span><span class="competition-fee-coin">🪙 '+esc(x.coinPrice||0)+' Coin</span></div>':type==='challenge'?'Entry: ৳ '+esc(x.fee||0)+' · '+esc(x.coinPrice||0)+' কয়েন':type==='gift'?'পুরস্কার: '+esc(x.quantity||''):esc(x.discountText||x.code||'বিশেষ অফার');
   const href=type==='course'?'/course/'+encodeURIComponent(x.id):type==='competition'?'/competition.html?id='+encodeURIComponent(x.id):type==='challenge'?'/challenge.html?id='+encodeURIComponent(x.id):type==='offer'?'/payments':'/member.html';
   const image=type==='course'?(x.imageUrl||x.image||x.coverImage||x.thumbnail||''):'';
   const imageHtml=type==='course'?'<div class="course-cover-wrap"><a class="course-cover" href="'+href+'" aria-label="'+esc(x.title||'Course')+'">'+(image?'<img src="'+esc(image)+'" alt="'+esc(x.title||'Course')+'" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.classList.add(\'image-missing\')">':'<span class="course-cover-fallback">SUKUN MEDHA</span>')+'</a>'+(discountPercent?'<span class="course-discount-badge">'+discountPercent+'% ছাড়</span>':'')+'</div>':'';
@@ -104,7 +107,7 @@ async function loadHome(){
  }catch(e){console.warn('Public content could not be loaded',e);}
 }
 loadHome();
-setInterval(refreshCompetitionTimers,60000);
+setInterval(refreshCompetitionTimers,1000);
 // Homepage search: filter visible cards across the main discovery sections.
 (()=>{const input=document.getElementById('siteSearch');if(!input)return;input.addEventListener('input',()=>{const q=input.value.trim().toLocaleLowerCase('bn');document.querySelectorAll('#competitions .catalog-card,#learn .catalog-card,#challenges .catalog-card,#offers .catalog-card,#winners .winner-card,#quizzes .quiz-categories a').forEach(card=>{card.hidden=!!q&&!card.textContent.toLocaleLowerCase('bn').includes(q)});});})();
 
