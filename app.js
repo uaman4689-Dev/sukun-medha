@@ -5,15 +5,17 @@ document.querySelectorAll('a[href^="#"]').forEach(link=>link.addEventListener('c
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=s=>{try{const u=new URL(s,location.href);return ['http:','https:'].includes(u.protocol)?u.href:'#'}catch{return '#'}};
 function competitionTimeLeft(c){
- const raw=c.deadline||c.endDate||'';
- if(!raw)return '';
- const end=new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw)?raw+'T23:59:59':raw).getTime();
- if(!Number.isFinite(end))return '';
+ const raw=c.deadline||c.endDate||c.end_date||c.endAt||c.end_at||c.registrationDeadline||'';
+ const base='display:block;width:fit-content;max-width:100%;box-sizing:border-box;margin:8px 0 12px;padding:8px 12px;border:1px solid #c8e5d2;border-radius:10px;background:#edf8f0;color:#145b3c;font-size:13px;font-weight:800;line-height:1.5';
+ if(!raw)return '<div class="competition-countdown" style="'+base+'">⏳ শেষ তারিখ নির্ধারিত হয়নি</div>';
+ const value=String(raw).trim();
+ const end=new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)?value+'T23:59:59+06:00':value).getTime();
+ if(!Number.isFinite(end))return '<div class="competition-countdown" style="'+base+'">⏳ শেষ তারিখ পড়া যাচ্ছে না</div>';
  const left=end-Date.now();
- if(left<=0)return '<span class="competition-countdown is-ended">সময় শেষ</span>';
+ if(left<=0)return '<div class="competition-countdown is-ended" style="'+base+';background:#fff1ed;border-color:#f2d1c7;color:#a33b2e">⌛ প্রতিযোগিতার সময় শেষ</div>';
  const totalHours=Math.floor(left/3600000),days=Math.floor(totalHours/24),hours=totalHours%24;
  const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[Number(d)]);
- return '<span class="competition-countdown" data-countdown="'+end+'">⏳ '+(days?bn(days)+' দিন ':'')+bn(hours)+' ঘণ্টা বাকি</span>';
+ return '<div class="competition-countdown" data-countdown="'+end+'" style="'+base+'">⏳ প্রতিযোগিতা শেষ হতে বাকি: '+(days?bn(days)+' দিন ':'')+bn(hours)+' ঘণ্টা</div>';
 }
 function refreshCompetitionTimers(){
  document.querySelectorAll('[data-countdown]').forEach(el=>{
