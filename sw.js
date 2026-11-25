@@ -1,4 +1,4 @@
-const CACHE = 'sukun-medha-shell-v5';
+const CACHE = 'sukun-medha-shell-v6';
 const CORE = [
   '/', '/index.html', '/member.html', '/amal.html',
   '/style.css', '/app.js', '/member.js', '/amal.css', '/amal.js',
@@ -31,6 +31,24 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+
+  // Always fetch current JS/CSS first so installed PWA does not keep stale Amal UI.
+  if (/\\.(js|css)$/.test(url.pathname)) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request, { cache: 'no-store' });
+        if (response && response.ok) {
+          const cache = await caches.open(CACHE);
+          cache.put(request, response.clone()).catch(() => {});
+        }
+        return response;
+      } catch (_) {
+        const cache = await caches.open(CACHE);
+        return await cache.match(request) || new Response('', { status: 504 });
+      }
+    })());
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
