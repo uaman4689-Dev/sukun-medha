@@ -52,7 +52,7 @@ module.exports=(app,pool,{member,admin})=>{
   const from=month+'-01';
   const [items,challenges,joined,rank]=await Promise.all([
    pool.query('SELECT id,title,category,unit FROM amal_items WHERE active=TRUE ORDER BY sort_order,id'),
-   pool.query("SELECT id,title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label FROM amal_challenges WHERE active=TRUE AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date ORDER BY start_date,id"),
+   pool.query("SELECT id,title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label FROM amal_challenges WHERE (active=TRUE AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date) OR id IN (SELECT challenge_id FROM amal_challenge_entries WHERE member_id=$1) ORDER BY start_date,id",[req.user.id]),
    pool.query('SELECT ce.challenge_id,ce.status,ce.reward_status,c.title AS challenge_title,c.reward_type,c.reward_value,c.reward_label FROM amal_challenge_entries ce JOIN amal_challenges c ON c.id=ce.challenge_id WHERE ce.member_id=$1',[req.user.id]),
    pool.query(`SELECT m.name,COUNT(DISTINCT e.entry_date)::int AS active_days,
     ROUND(100.0*COUNT(*) FILTER(WHERE e.completed)/NULLIF(COUNT(DISTINCT e.entry_date)*(SELECT COUNT(*) FROM amal_items WHERE active=TRUE),0))::int AS score
