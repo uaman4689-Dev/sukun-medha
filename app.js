@@ -29,7 +29,7 @@ function renderCollection(id,items,type){
  const host=document.getElementById(id);if(!host)return;
  const seenIds=new Set(),seenTitles=new Set(),unique=[];(items||[]).forEach(x=>{if(type!=='course'){unique.push(x);return}const id=String(x.id||'').trim(),title=String(x.title||x.name||'').trim().toLocaleLowerCase('bn').replace(/\s+/g,' ');if((id&&seenIds.has(id))||(title&&seenTitles.has(title)))return;if(id)seenIds.add(id);if(title)seenTitles.add(title);unique.push(x)});
  if(!unique.length){host.innerHTML='<div class="content-empty">নতুন আয়োজন শিগগিরই আসছে।</div>';return;}
- host.innerHTML=unique.slice(-6).reverse().map(x=>{
+ const visibleItems=type==='competition'?unique:unique.slice(-6);host.innerHTML=visibleItems.slice().reverse().map(x=>{
   const freeCourse=type==='course'&&(x.accessType==='free'||(!x.accessType&&Number(x.price||0)===0&&Number(x.coinPrice||0)===0));
   const regular=Number(x.regularPrice??x.price??0),offer=Number(x.offerPrice||0),hasOffer=offer>0&&offer<regular;
   const discountPercent=hasOffer&&regular>0?Math.round((regular-offer)*100/regular):0;
