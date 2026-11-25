@@ -87,3 +87,12 @@
 #learnList .course-actions .course-primary{background:#104e40;color:#fff}
 @media(max-width:700px){#learnList .course-card{padding:9px;border-radius:14px}#learnList .course-card h3{font-size:14px}#learnList .course-card p{font-size:10px}#learnList .course-actions{grid-template-columns:1fr;gap:6px}#learnList .course-actions .catalog-add,#learnList .course-actions .course-buy-now,#learnList .course-actions .course-primary{min-height:35px;font-size:11px}}
 @media(max-width:390px){#learnList .course-actions{grid-template-columns:1fr 1fr}#learnList .course-actions .course-share-home{grid-column:1/-1}}
+
+/* Side-by-side premium fee panels for competition cards */
+.competition-fee-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;margin:14px 0 17px;}
+.competition-fee-cash,.competition-fee-coin{min-width:0;min-height:76px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:11px 8px;border-radius:13px;text-align:center;box-shadow:0 5px 14px #183b3409;}
+.competition-fee-cash{background:linear-gradient(145deg,#effaf2,#dff2e5);border:1px solid #c9e6d2;color:#155b3b;}
+.competition-fee-coin{background:linear-gradient(145deg,#fff9e9,#ffefc9);border:1px solid #f0dfb0;color:#8a641d;}
+.competition-fee-cash small,.competition-fee-coin small{font-size:9px;font-weight:900;letter-spacing:1px;opacity:.82;line-height:1.2;}
+.competition-fee-cash strong,.competition-fee-coin strong{font-size:19px;font-weight:950;line-height:1.15;overflow-wrap:anywhere;}
+@media(max-width:390px){.competition-fee-row{gap:7px}.competition-fee-cash,.competition-fee-coin{min-height:70px;padding:9px 5px}.competition-fee-cash strong,.competition-fee-coin strong{font-size:17px}}
