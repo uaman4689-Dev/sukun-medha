@@ -52,7 +52,7 @@ module.exports=(app,pool,{member,admin})=>{
   const from=month+'-01';
   const [items,challenges,joined,rank]=await Promise.all([
    pool.query('SELECT id,title,category,unit FROM amal_items WHERE active=TRUE ORDER BY sort_order,id'),
-   pool.query("SELECT id,title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label FROM amal_challenges WHERE active=TRUE AND end_date>=CURRENT_DATE ORDER BY start_date,id"),
+   pool.query("SELECT id,title,description,start_date,end_date,target_days,target_category,reward_type,reward_value,reward_label FROM amal_challenges WHERE active=TRUE AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date ORDER BY start_date,id"),
    pool.query('SELECT ce.challenge_id,ce.status,ce.reward_status,c.title AS challenge_title,c.reward_type,c.reward_value,c.reward_label FROM amal_challenge_entries ce JOIN amal_challenges c ON c.id=ce.challenge_id WHERE ce.member_id=$1',[req.user.id]),
    pool.query(`SELECT m.name,COUNT(DISTINCT e.entry_date)::int AS active_days,
     ROUND(100.0*COUNT(*) FILTER(WHERE e.completed)/NULLIF(COUNT(DISTINCT e.entry_date)*(SELECT COUNT(*) FROM amal_items WHERE active=TRUE),0))::int AS score
@@ -78,7 +78,7 @@ module.exports=(app,pool,{member,admin})=>{
   res.json({entry:r.rows[0]});
  }catch(e){fail(res,e)}});
  app.post('/api/amal/challenges/:id/join',member,async(req,res)=>{try{
-  await ensure();const c=await pool.query('SELECT id FROM amal_challenges WHERE id=$1 AND active=TRUE AND start_date<=(NOW() AT TIME ZONE 'Asia/Dhaka')::date AND end_date>=CURRENT_DATE',[req.params.id]);
+  await ensure();const c=await pool.query(`SELECT id FROM amal_challenges WHERE id=$1 AND active=TRUE AND start_date<=(NOW() AT TIME ZONE 'Asia/Dhaka')::date AND end_date>=(NOW() AT TIME ZONE 'Asia/Dhaka')::date`,[req.params.id]);
   if(!c.rowCount)return res.status(404).json({error:'এই চ্যালেঞ্জে এখন যোগ দেওয়া যাচ্ছে না।'});
   const r=await pool.query('INSERT INTO amal_challenge_entries(challenge_id,member_id) VALUES($1,$2) ON CONFLICT(challenge_id,member_id) DO NOTHING RETURNING id',[req.params.id,req.user.id]);
   res.json({ok:true,joined:true});
@@ -99,7 +99,7 @@ module.exports=(app,pool,{member,admin})=>{
    pool.query('SELECT * FROM amal_challenges ORDER BY created_at DESC'),
    pool.query(`SELECT ce.id,ce.status,ce.reward_status,ce.joined_at,m.name,m.phone,c.title AS challenge_title,c.reward_type,c.reward_value,c.reward_label
     FROM amal_challenge_entries ce JOIN members m ON m.id=ce.member_id JOIN amal_challenges c ON c.id=ce.challenge_id ORDER BY ce.joined_at DESC LIMIT 250`),
-   pool.query('SELECT COUNT(*)::int AS members,(SELECT COUNT(*)::int FROM amal_entries WHERE entry_date=(NOW() AT TIME ZONE 'Asia/Dhaka')::date) AS today_entries,(SELECT COUNT(*)::int FROM amal_challenge_entries) AS challenge_joins FROM members')
+   pool.query(`SELECT COUNT(*)::int AS members,(SELECT COUNT(*)::int FROM amal_entries WHERE entry_date=(NOW() AT TIME ZONE 'Asia/Dhaka')::date) AS today_entries,(SELECT COUNT(*)::int FROM amal_challenge_entries) AS challenge_joins FROM members`)
   ]);res.json({items:items.rows,challenges:challenges.rows,entries:entries.rows,stats:stats.rows[0]});
  }catch(e){fail(res,e)}});
  app.post('/api/admin/amal/items',admin,async(req,res)=>{try{await ensure();const {title,category,unit}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'আমলের নাম লিখুন।'});const r=await pool.query('INSERT INTO amal_items(title,category,unit,sort_order) VALUES($1,$2,$3,COALESCE((SELECT MAX(sort_order)+1 FROM amal_items),1)) RETURNING *',[String(title).trim(),String(category||'অন্যান্য').trim(),String(unit||'বার').trim()]);res.json({item:r.rows[0]})}catch(e){fail(res,e)}});
