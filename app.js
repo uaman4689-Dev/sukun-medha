@@ -48,7 +48,7 @@ function renderCollection(id,items,type){
    const shareButton='<button class="catalog-add course-share-home" type="button" data-course-share="'+esc(x.id)+'">↗ Share</button>';
    actions=freeCourse?'<div class="course-actions"><a class="course-primary" href="'+href+'">কোর্স শুরু করুন ↗</a>'+shareButton+'</div>':'<div class="course-actions"><button class="catalog-add" data-add-type="course" data-add-id="'+esc(x.id)+'">Add to Cart</button><button class="course-buy-now" data-buy-now="course" data-buy-id="'+esc(x.id)+'">Buy Now</button>'+shareButton+'</div>';
   }else if(type==='competition'){
-   actions='<div class="course-actions"><a class="course-primary" href="'+href+'">প্রতিযোগিতায় Entry নিন ↗</a><button class="catalog-add" type="button" data-public-share="'+esc(href)+'" data-share-title="'+esc(x.title||'Competition')+'">↗ Share</button></div>';
+   actions='<div class="course-actions"><a class="course-primary" href="'+href+'" onclick="window.location.assign(this.href);return false;">প্রতিযোগিতায় Entry নিন ↗</a><button class="catalog-add" type="button" data-public-share="'+esc(href)+'" data-share-title="'+esc(x.title||'Competition')+'">↗ Share</button></div>';
   }else if(type==='challenge'&&!freeCourse){
    actions='<button class="catalog-add" data-add-type="challenge" data-add-id="'+esc(x.id)+'">Cart-এ যোগ করুন</button>';
   }
