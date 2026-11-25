@@ -40,13 +40,13 @@ module.exports=(app,pool,{member,admin})=>{
    ['দরুদ পাঠ','যিকির','বার',100],
    ['দোয়া','দোয়া','বার',5],
    ['সদকা','সদকা','টাকা',0],
-   ['তাহাজ্জুদ','ইবাদত','রাকাত',1],
+   ['তাহাজ্জুদ','ইবাদত','বার',1],
    ['দৈনিক ভালো কাজ','আখলাক','কাজ',1]
   ];
   for(let i=0;i<defaults.length;i++){
    const [title,category,unit,target]=defaults[i];
    await pool.query('INSERT INTO amal_items(title,category,unit,target_quantity,sort_order) SELECT $1,$2,$3,$4,$5 WHERE NOT EXISTS(SELECT 1 FROM amal_items WHERE title=$1)',[title,category,unit,target,i+1]);
-   await pool.query('UPDATE amal_items SET category=$2,unit=$3,target_quantity=$4,active=TRUE WHERE title=$1',[title,category,unit,target]);
+   await pool.query('UPDATE amal_items SET category=$2,unit=$3,target_quantity=$4,active=TRUE WHERE title=$1 AND target_quantity=1',[title,category,unit,target]);
   }
  }).catch(e=>{ready=null;throw e}));
  const fail=(res,e)=>{console.error('Amal tracker:',e);res.status(500).json({error:'তথ্য লোড বা সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।'})};
