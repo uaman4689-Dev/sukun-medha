@@ -36,6 +36,6 @@ After deployment, check `/api/health`; it should return `database: connected`. S
 - Use a strong unique Admin password and keep `JWT_SECRET` private.
 - Configure automated PostgreSQL backups in Render.
 - The daily quiz currently uses a small starter question set; expand it into a full Admin-managed question bank before public launch.
-- Coins are promotional points, not cash; they cannot be withdrawn or transferred.
+- Coins are promotional points, not cash. Community Coin Share/Gift transfers are subject to Admin limits and settings; they are not cash withdrawals.
 - Paid-entry competitions, payment collection and prize structures need separate legal and operational review. Do not use pooled entry fees or chance-based prize mechanics.
 - This is a deployable foundation, not yet a complete payment gateway, certificate-verification or full exam-management product.
