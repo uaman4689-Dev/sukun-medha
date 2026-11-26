@@ -248,3 +248,24 @@ CREATE INDEX IF NOT EXISTS idx_community_support_messages ON community_support_m
 INSERT INTO community_support_messages(support_id,sender_role,sender_member_id,body,created_at)
 SELECT s.id,'member',s.member_id,s.body,s.created_at FROM community_support s
 WHERE NOT EXISTS(SELECT 1 FROM community_support_messages x WHERE x.support_id=s.id);
+
+
+-- Community friend relationships (separate from chat requests)
+CREATE TABLE IF NOT EXISTS community_friendships(
+ member_a UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ member_b UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY(member_a,member_b),
+ CHECK(member_a<member_b)
+);
+CREATE TABLE IF NOT EXISTS community_friend_requests(
+ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ sender_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ receiver_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ message TEXT NOT NULL DEFAULT '',
+ status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','Accepted','Rejected','Cancelled')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS community_pending_friend_pair
+ ON community_friend_requests(sender_id,receiver_id) WHERE status='Pending';
