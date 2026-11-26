@@ -1,0 +1,92 @@
+name: SUKUN MEDHA Neon Database Backup
+
+on:
+  schedule:
+    # 02:00 Bangladesh time (UTC+6) = 20:00 UTC
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sukun-medha-neon-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Create and upload PostgreSQL backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEON_DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in NEON_DIRECT_URL R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing GitHub Actions secret for $name"
+              exit 1
+            fi
+          done
+
+      - name: Prepare backup filename
+        shell: bash
+        run: echo "BACKUP_FILE=sukun-medha-$(date -u +%Y%m%dT%H%M%SZ).dump" >> "$GITHUB_ENV"
+
+      - name: Create PostgreSQL custom-format dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sukun-medha-backup"
+          docker run --rm \
+            -e NEON_DIRECT_URL \
+            -e BACKUP_FILE \
+            -v "$RUNNER_TEMP/sukun-medha-backup:/backup" \
+            postgres:18 \
+            sh -euc 'pg_dump "$NEON_DIRECT_URL" --format=custom --no-owner --no-acl --file="/backup/$BACKUP_FILE"'
+          test -s "$RUNNER_TEMP/sukun-medha-backup/$BACKUP_FILE"
+
+      - name: Verify dump can be read
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e BACKUP_FILE \
+            -v "$RUNNER_TEMP/sukun-medha-backup:/backup:ro" \
+            postgres:18 \
+            sh -euc 'pg_restore --list "/backup/$BACKUP_FILE" >/dev/null'
+          cd "$RUNNER_TEMP/sukun-medha-backup"
+          sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
+
+      - name: Install AWS CLI for Cloudflare R2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+
+      - name: Upload backup to private Cloudflare R2 bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3 cp "$RUNNER_TEMP/sukun-medha-backup/$BACKUP_FILE" \
+            "s3://$R2_BUCKET/sukun-medha/$BACKUP_FILE" \
+            --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          aws s3 cp "$RUNNER_TEMP/sukun-medha-backup/$BACKUP_FILE.sha256" \
+            "s3://$R2_BUCKET/sukun-medha/$BACKUP_FILE.sha256" \
+            --endpoint-url "$R2_ENDPOINT" --only-show-errors
+
+      - name: Confirm remote backup exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3api head-object --bucket "$R2_BUCKET" \
+            --key "sukun-medha/$BACKUP_FILE" \
+            --endpoint-url "$R2_ENDPOINT" >/dev/null
+          echo "Backup uploaded and verified: $BACKUP_FILE"
