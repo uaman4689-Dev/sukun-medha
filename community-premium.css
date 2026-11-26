@@ -1,0 +1,58 @@
+/* SUKUN MEDHA Community — premium social layout */
+:root{--sm-green:#086b55;--sm-ink:#172b27;--sm-muted:#75827d;--sm-line:#e8eeeb;--sm-bg:#f0f2f5;--sm-gold:#d6b36a}
+body:has(.cp),body:has(.ac){background:var(--sm-bg)!important;color:var(--sm-ink)}
+.cp{max-width:1240px!important;margin:0 auto!important;padding:22px 20px 90px!important;display:grid;grid-template-columns:210px minmax(0,720px) 260px;gap:22px;align-items:start}
+.cp>.head{grid-column:1/-1;background:#fff;border:1px solid var(--sm-line);border-radius:20px;padding:18px 22px;box-shadow:0 8px 28px #17372b0a}
+.cp>.head h1{font-size:27px;letter-spacing:-.5px;color:#123f36;margin:4px 0}
+.cp>.head small{font:800 9px Manrope,sans-serif;letter-spacing:2px;color:#a48243}
+.cp>.head .muted{font-size:12px}
+.cp>.tabs{grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:7px;position:sticky;top:18px;margin:0;padding:12px;background:#fff;border:1px solid var(--sm-line);border-radius:18px;overflow:visible}
+.cp>.tabs button{width:100%;text-align:left;border:0;background:transparent;padding:13px 14px;border-radius:11px;font:700 14px 'Hind Siliguri';color:#53635d;cursor:pointer;transition:.18s}
+.cp>.tabs button:before{display:inline-block;width:25px;color:#8d9a94}
+.cp>.tabs button[data-tab=feed]:before{content:"⌂"}.cp>.tabs button[data-tab=wallet]:before{content:"✦"}.cp>.tabs button[data-tab=chat]:before{content:"◉"}.cp>.tabs button[data-tab=support]:before{content:"◌"}
+.cp>.tabs button.active,.cp>.tabs button:hover{background:#eaf5f0;color:#075b47}
+.cp>#feedPanel,.cp>#walletPanel,.cp>#chatPanel,.cp>#supportPanel{grid-column:2;grid-row:2;min-width:0}
+.cp .box,.cp .post{background:#fff;border:1px solid var(--sm-line);border-radius:17px;padding:17px;margin:0 0 14px;box-shadow:0 5px 22px #17372b08}
+.cp .box h3{font-size:17px;color:#173f35;margin:0 0 13px}
+.cp .box textarea,.cp .box input,.cp .box select{border:1px solid #e3eae6;background:#f8faf9;border-radius:11px;padding:12px;font:14px 'Hind Siliguri';outline:none}
+.cp .box textarea:focus,.cp .box input:focus{border-color:#77b9a2;box-shadow:0 0 0 3px #0a755512}
+.cp .btnc{background:linear-gradient(135deg,#0d765d,#07523f);border-radius:10px;padding:10px 17px;box-shadow:0 5px 13px #075b471c;cursor:pointer}
+.cp .post{padding:19px;transition:box-shadow .2s,border-color .2s}
+.cp .post:hover{border-color:#d5e5dc;box-shadow:0 12px 30px #17372b10}
+.cp .ptop{gap:11px}.cp .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(145deg,#d9c18b,#0b6550);border:3px solid #eef5ef;font-weight:800}
+.cp .body{font-size:15px;line-height:1.85;color:#253b34}
+.cp .post>img{width:100%;max-height:520px;object-fit:cover;border-radius:13px;margin:8px 0}
+.cp .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px;padding-top:12px;border-color:#edf1ee}
+.cp .actions button{border-radius:10px;background:#f5f7f6;color:#52645c;font:700 13px 'Hind Siliguri';padding:10px}
+.cp .actions button:hover{background:#eaf4ef;color:#075b47}
+.cp .item{background:#f8faf9;border:1px solid #edf1ee;border-radius:12px;padding:12px}
+.cp #room{position:fixed;right:24px;bottom:92px;width:min(390px,calc(100vw - 28px));height:min(570px,calc(100vh - 130px));z-index:1000;display:flex;flex-direction:column;box-shadow:0 22px 70px #0b2d2540;border:1px solid #dfe9e3;border-radius:20px}
+.cp #room.hidden{display:none!important}.cp #room h3{padding-bottom:12px;border-bottom:1px solid var(--sm-line)}
+.cp #messages{flex:1;max-height:none!important;overflow:auto;padding:6px 2px}
+.cp #messages .item{border-radius:16px;margin:7px 0;background:#f0f3f2}
+.cp #messages .item[style*=margin-left]{background:#dff4e9!important}
+.cp #send{padding-top:12px;border-top:1px solid var(--sm-line);align-items:center}
+.cp #send input[name=body]{flex:1;min-width:0}
+.cp #send input[type=file]{max-width:92px!important;font-size:10px}
+.cp #supportRoom{margin-top:15px}.cp #supportMessages{max-height:40vh;overflow:auto}
+.cp #notificationPanel{position:absolute!important;right:18px;top:76px;width:min(360px,calc(100vw - 36px));max-height:65vh;overflow:auto;box-shadow:0 18px 50px #17372b25}
+.sm-messenger-fab{position:fixed;right:25px;bottom:24px;z-index:1100;width:60px;height:60px;border:0;border-radius:50%;background:linear-gradient(145deg,#1689f5,#0866d6);color:#fff;box-shadow:0 10px 28px #0866d655;display:grid;place-items:center;cursor:pointer;transition:transform .2s}
+.sm-messenger-fab:hover{transform:translateY(-4px) scale(1.04)}
+.sm-messenger-fab svg{width:29px;height:29px;fill:currentColor}
+.sm-fab-count{position:absolute;right:-2px;top:-3px;min-width:19px;height:19px;border-radius:20px;background:#e94255;color:#fff;font:800 10px Arial;display:grid;place-items:center;border:2px solid #fff}
+.ac{max-width:1420px!important;padding:25px 24px 70px!important}
+.ac>header{background:linear-gradient(120deg,#073d37,#0b6250 65%,#173f37);color:#fff;border-radius:20px;padding:22px 25px;box-shadow:0 14px 36px #092e2530}
+.ac>header h1{font-size:27px;margin:4px 0;color:#fff}.ac>header small{color:#e5cf96;letter-spacing:2px;font:800 9px Manrope}
+.ac>header a{color:#e7eee9}
+.ac>.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0;padding:10px;background:#fff;border:1px solid var(--sm-line);border-radius:15px}
+.ac .tabs button,.ac button{border-radius:10px;padding:10px 15px;background:#edf4ef;color:#315a4b;font-size:13px;transition:.18s}
+.ac .tabs button.active,.ac .tabs button:hover,.ac button:hover{background:#0b6550;color:#fff;transform:translateY(-1px)}
+.ac>.card{background:#fff;border:1px solid var(--sm-line);border-radius:17px;padding:20px;box-shadow:0 7px 24px #17372b09}
+.ac .card h2{color:#16483b;font-size:19px;margin:0 0 15px}
+.ac .card input,.ac .card textarea{border:1px solid #dfe8e2;border-radius:10px;padding:11px;font:13px 'Hind Siliguri'}
+.ac .card table{font-size:13px}.ac .card th{background:#f2f6f3;color:#456457;font-weight:800}.ac .card td,.ac .card th{padding:11px;border-bottom:1px solid #edf1ee}
+.ac .card tr:hover td{background:#fafcfb}
+.ac #adminSupportRoom{border-color:#cbded3;box-shadow:0 12px 38px #17372b15}
+.ac #adminNotifications{position:absolute;right:24px;top:95px;width:min(360px,calc(100vw - 40px));z-index:20;max-height:60vh;overflow:auto}
+@media(max-width:900px){.cp{grid-template-columns:1fr;gap:12px;padding:12px 12px 95px!important}.cp>.head,.cp>.tabs,.cp>#feedPanel,.cp>#walletPanel,.cp>#chatPanel,.cp>#supportPanel{grid-column:1;grid-row:auto}.cp>.tabs{position:sticky;top:0;z-index:50;flex-direction:row;overflow-x:auto;padding:7px;white-space:nowrap}.cp>.tabs button{width:auto;flex:0 0 auto;padding:10px 12px}.cp>.tabs button:before{display:none}.cp>.head{padding:14px 16px}.cp>.head h1{font-size:23px}.cp #room{right:10px;bottom:88px;width:calc(100vw - 20px);height:min(72vh,620px)}.sm-messenger-fab{right:16px;bottom:16px;width:56px;height:56px}.ac{padding:12px!important}.ac>header{padding:17px;border-radius:15px}.ac>header h1{font-size:21px}.ac>.tabs{position:sticky;top:0;z-index:40;flex-wrap:nowrap;overflow:auto}.ac>.tabs button{white-space:nowrap;flex:0 0 auto}}
+@media(max-width:480px){.cp .box,.cp .post{padding:13px;border-radius:14px}.cp .actions{gap:4px}.cp .actions button{font-size:11px;padding:9px 4px}.cp #send{flex-wrap:wrap}.cp #send input[name=body]{width:100%;flex-basis:100%}.ac>.card{padding:13px}.ac .card table{font-size:11px}}
