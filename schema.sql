@@ -269,3 +269,27 @@ CREATE TABLE IF NOT EXISTS community_friend_requests(
 );
 CREATE UNIQUE INDEX IF NOT EXISTS community_pending_friend_pair
  ON community_friend_requests(sender_id,receiver_id) WHERE status='Pending';
+
+
+-- SUKUN MEDHA Digital Book Reader (PDF text is stored as private reader pages, not a public file)
+CREATE TABLE IF NOT EXISTS book_pages(
+ book_id TEXT PRIMARY KEY,
+ pages JSONB NOT NULL DEFAULT '[]'::jsonb,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS member_book_progress(
+ member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ book_id TEXT NOT NULL,
+ page_index INTEGER NOT NULL DEFAULT 0,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY(member_id,book_id)
+);
+CREATE TABLE IF NOT EXISTS member_bookmarks(
+ id BIGSERIAL PRIMARY KEY,
+ member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ book_id TEXT NOT NULL,
+ page_index INTEGER NOT NULL DEFAULT 0,
+ quote TEXT NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_bookmarks_member ON member_bookmarks(member_id,created_at DESC);
