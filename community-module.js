@@ -1,5 +1,5 @@
 'use strict';
-module.exports=function(app,pool,{member,admin}){
+module.exports=function(app,pool,{member,admin,auth}){
 const clean=s=>String(s??'').trim(),err=(res,e)=>{console.error('Community API',e);res.status(500).json({error:'সার্ভারে সমস্যা হয়েছে।'})};
 
 const notify=async({memberId=null,role='member',type,title,body='',link='/community'})=>pool.query('INSERT INTO community_notifications(recipient_member_id,recipient_role,type,title,body,link) VALUES($1,$2,$3,$4,$5,$6)',[memberId,role,type,title,body,link]);
