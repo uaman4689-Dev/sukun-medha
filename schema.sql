@@ -235,3 +235,12 @@ CREATE INDEX IF NOT EXISTS idx_community_posts_date ON community_posts(status,cr
 CREATE INDEX IF NOT EXISTS idx_community_comments_post ON community_comments(post_id,created_at);
 CREATE INDEX IF NOT EXISTS idx_community_messages_conv ON community_messages(conversation_id,created_at);
 CREATE INDEX IF NOT EXISTS idx_community_support_status ON community_support(status,updated_at DESC);
+
+-- Community live notifications, message media and two-way admin support
+ALTER TABLE community_messages ADD COLUMN IF NOT EXISTS image_data TEXT;
+ALTER TABLE community_support ADD COLUMN IF NOT EXISTS last_sender_role TEXT NOT NULL DEFAULT 'member';
+CREATE TABLE IF NOT EXISTS community_notifications(id BIGSERIAL PRIMARY KEY,recipient_member_id UUID REFERENCES members(id) ON DELETE CASCADE,recipient_role TEXT NOT NULL DEFAULT 'member',type TEXT NOT NULL,title TEXT NOT NULL,body TEXT NOT NULL DEFAULT '',link TEXT NOT NULL DEFAULT '/community',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),read_at TIMESTAMPTZ);
+CREATE INDEX IF NOT EXISTS idx_community_notifications_member ON community_notifications(recipient_member_id,id DESC);
+CREATE INDEX IF NOT EXISTS idx_community_notifications_role ON community_notifications(recipient_role,id DESC);
+CREATE TABLE IF NOT EXISTS community_support_messages(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),support_id UUID NOT NULL REFERENCES community_support(id) ON DELETE CASCADE,sender_role TEXT NOT NULL CHECK(sender_role IN ('member','admin')),sender_member_id UUID REFERENCES members(id),body TEXT NOT NULL CHECK(length(body)<=3000),image_data TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),read_at TIMESTAMPTZ);
+CREATE INDEX IF NOT EXISTS idx_community_support_messages ON community_support_messages(support_id,created_at);
