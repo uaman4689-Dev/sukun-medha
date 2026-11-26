@@ -5,7 +5,8 @@
   "description": "SUKUN MEDHA Education & Competition Platform",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check amal-module.js && node --check amal.js && node --check pwa.js && node --check admin/amal.js && node --check online-exam-module.js && node --check commerce-module.js && node --check competition.js && node --check admin/competition-office.js && node --check admin/admin.js && node --check member.js && node --check community-module.js && node --check community.js && node --check admin/community.js"
+    "check": "node --check server.js && node --check amal-module.js && node --check amal.js && node --check pwa.js && node --check admin/amal.js && node --check online-exam-module.js && node --check commerce-module.js && node --check competition.js && node --check admin/competition-office.js && node --check admin/admin.js && node --check member.js && node --check community-module.js && node --check community.js && node --check admin/community.js",
+    "test:community": "node test/community-e2e.js"
   },
   "engines": {
     "node": ">=20"
