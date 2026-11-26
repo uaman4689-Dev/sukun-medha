@@ -70,3 +70,85 @@ body:has(.cp),body:has(.ac){background:var(--sm-bg)!important;color:var(--sm-ink
 .cp .sm-chat-row small{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cp .sm-chat-row em{font-style:normal;background:#0b765d;color:#fff;border-radius:20px;padding:2px 7px;font-size:10px}
 @media(max-width:600px){.cp .sm-member-list{grid-template-columns:1fr}.cp .sm-member-row{padding:8px}}
+
+
+/* SUKUN MEDHA Community — clean top navigation refresh */
+.cp{
+  width:min(1120px,100%)!important;max-width:1120px!important;
+  margin:0 auto!important;padding:26px 22px 110px!important;
+  display:flex!important;flex-direction:column!important;gap:18px!important;
+}
+.cp>.head{
+  width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:22px 26px!important;border:1px solid #e7ede9!important;
+  border-radius:22px!important;background:linear-gradient(120deg,#fff 0%,#f8fcf9 100%)!important;
+  box-shadow:0 8px 30px rgba(22,55,42,.045)!important;
+}
+.cp>.head h1{font-size:29px!important;font-weight:800!important;letter-spacing:-.7px!important}
+.cp>.tabs{
+  width:100%;box-sizing:border-box;display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:9px!important;
+  position:relative!important;top:auto!important;z-index:5!important;
+  margin:0!important;padding:9px!important;border:1px solid #e5ece7!important;
+  border-radius:18px!important;background:#fff!important;
+  box-shadow:0 7px 24px rgba(22,55,42,.055)!important;
+}
+.cp>.tabs button{
+  width:100%!important;min-width:0!important;min-height:54px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;
+  padding:12px 14px!important;border:1px solid transparent!important;border-radius:12px!important;
+  background:transparent!important;color:#607168!important;font-size:14px!important;font-weight:750!important;
+  white-space:nowrap!important;cursor:pointer!important;transition:background .18s,border-color .18s,color .18s,transform .18s!important;
+}
+.cp>.tabs button:before{display:none!important;content:none!important}
+.cp>.tabs button:hover{background:#f3f8f5!important;color:#12634d!important;transform:translateY(-1px)!important}
+.cp>.tabs button.active{
+  background:#eaf5ef!important;border-color:#d9eadf!important;color:#075b45!important;
+  box-shadow:inset 0 0 0 1px rgba(11,101,78,.035)!important;
+}
+.cp>#feedPanel,.cp>#walletPanel,.cp>#chatPanel,.cp>#supportPanel{
+  display:block;width:100%;min-width:0;box-sizing:border-box;
+  animation:smPanelIn .22s ease both;
+}
+.cp>#feedPanel.hidden,.cp>#walletPanel.hidden,.cp>#chatPanel.hidden,.cp>#supportPanel.hidden{display:none!important}
+@keyframes smPanelIn{from{opacity:.55;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.cp .box,.cp .post{
+  border:1px solid #e7ede9!important;border-radius:18px!important;
+  box-shadow:0 5px 22px rgba(20,53,39,.045)!important;
+}
+.cp .box h3{font-size:17px!important;font-weight:800!important;letter-spacing:-.15px}
+.cp .box textarea,.cp .box input,.cp .box select{
+  border:1px solid #e3eae5!important;background:#fbfcfb!important;border-radius:12px!important;
+  transition:border-color .18s,box-shadow .18s!important;
+}
+.cp .box textarea:focus,.cp .box input:focus,.cp .box select:focus{
+  border-color:#83bba2!important;box-shadow:0 0 0 3px rgba(18,119,83,.09)!important;
+}
+.cp .btnc{border-radius:11px!important;box-shadow:none!important;transition:transform .16s,filter .16s!important}
+.cp .btnc:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.cp .post{padding:21px!important}
+.cp .actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.cp #chatPanel>.box:first-child{border-color:#e2ebe5!important}
+.cp .sm-member-list{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.cp #notificationPanel{z-index:100!important}
+@media(max-width:760px){
+ .cp{padding:13px 12px 100px!important;gap:12px!important}
+ .cp>.head{padding:15px 16px!important;border-radius:17px!important}
+ .cp>.head h1{font-size:23px!important}
+ .cp>.tabs{
+   position:sticky!important;top:0!important;display:grid!important;
+   grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important;
+   padding:6px!important;border-radius:15px!important;
+ }
+ .cp>.tabs button{min-height:48px!important;padding:8px 4px!important;font-size:12px!important;white-space:normal!important;line-height:1.25!important}
+ .cp .sm-member-list{grid-template-columns:1fr!important}
+ .cp .box,.cp .post{padding:14px!important;border-radius:15px!important}
+}
+@media(max-width:390px){
+ .cp{padding-left:9px!important;padding-right:9px!important}
+ .cp>.tabs{gap:3px!important;padding:5px!important}
+ .cp>.tabs button{font-size:11px!important;padding:7px 2px!important}
+ .cp>.head{align-items:flex-start!important}
+ .cp>.head>div:last-child{gap:5px!important;flex-wrap:wrap}
+ .cp>.head a{font-size:11px}
+}
