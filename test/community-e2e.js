@@ -45,7 +45,7 @@ const {Pool}=require('pg');
   const balances=await pool.query('SELECT id,coin_balance FROM members WHERE id=ANY($1::uuid[])',[ [one.id,two.id] ]);
   assert.equal(Number(balances.rows.find(x=>x.id===one.id).coin_balance),990);assert.equal(Number(balances.rows.find(x=>x.id===two.id).coin_balance),1010);
   await call('/api/community/gifts',t1,{receiverId:two.id,title:'CI Gift',body:'A test gift'},'POST');
-  const controller=new AbortController();const event=await fetch(base+'/api/community/events',{headers:{Authorization:'Bearer '+t2},signal:controller.signal});assert.equal(event.status,200);assert.match(event.headers.get('content-type')||'','text/event-stream');controller.abort();
+  const controller=new AbortController();const event=await fetch(base+'/api/community/events',{headers:{Authorization:'Bearer '+t2},signal:controller.signal});assert.equal(event.status,200);assert.match(event.headers.get('content-type')||'',/text\/event-stream/);controller.abort();
   console.log('Community E2E PASS: posts, comments/replies, likes, requests, image chat, two-way admin support, SSE notifications, coin transfer and custom gifts.');
  }finally{if(server){server.closeAllConnections?.();await new Promise(r=>server.close(r))}await pool.end()}
 })().catch(e=>{console.error(e);process.exit(1)});
