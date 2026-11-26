@@ -244,3 +244,7 @@ CREATE INDEX IF NOT EXISTS idx_community_notifications_member ON community_notif
 CREATE INDEX IF NOT EXISTS idx_community_notifications_role ON community_notifications(recipient_role,id DESC);
 CREATE TABLE IF NOT EXISTS community_support_messages(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),support_id UUID NOT NULL REFERENCES community_support(id) ON DELETE CASCADE,sender_role TEXT NOT NULL CHECK(sender_role IN ('member','admin')),sender_member_id UUID REFERENCES members(id),body TEXT NOT NULL CHECK(length(body)<=3000),image_data TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),read_at TIMESTAMPTZ);
 CREATE INDEX IF NOT EXISTS idx_community_support_messages ON community_support_messages(support_id,created_at);
+
+INSERT INTO community_support_messages(support_id,sender_role,sender_member_id,body,created_at)
+SELECT s.id,'member',s.member_id,s.body,s.created_at FROM community_support s
+WHERE NOT EXISTS(SELECT 1 FROM community_support_messages x WHERE x.support_id=s.id);
