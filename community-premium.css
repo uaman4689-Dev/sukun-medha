@@ -56,3 +56,17 @@ body:has(.cp),body:has(.ac){background:var(--sm-bg)!important;color:var(--sm-ink
 .ac #adminNotifications{position:absolute;right:24px;top:95px;width:min(360px,calc(100vw - 40px));z-index:20;max-height:60vh;overflow:auto}
 @media(max-width:900px){.cp{grid-template-columns:1fr;gap:12px;padding:12px 12px 95px!important}.cp>.head,.cp>.tabs,.cp>#feedPanel,.cp>#walletPanel,.cp>#chatPanel,.cp>#supportPanel{grid-column:1;grid-row:auto}.cp>.tabs{position:sticky;top:0;z-index:50;flex-direction:row;overflow-x:auto;padding:7px;white-space:nowrap}.cp>.tabs button{width:auto;flex:0 0 auto;padding:10px 12px}.cp>.tabs button:before{display:none}.cp>.head{padding:14px 16px}.cp>.head h1{font-size:23px}.cp #room{right:10px;bottom:88px;width:calc(100vw - 20px);height:min(72vh,620px)}.sm-messenger-fab{right:16px;bottom:16px;width:56px;height:56px}.ac{padding:12px!important}.ac>header{padding:17px;border-radius:15px}.ac>header h1{font-size:21px}.ac>.tabs{position:sticky;top:0;z-index:40;flex-wrap:nowrap;overflow:auto}.ac>.tabs button{white-space:nowrap;flex:0 0 auto}}
 @media(max-width:480px){.cp .box,.cp .post{padding:13px;border-radius:14px}.cp .actions{gap:4px}.cp .actions button{font-size:11px;padding:9px 4px}.cp #send{flex-wrap:wrap}.cp #send input[name=body]{width:100%;flex-basis:100%}.ac>.card{padding:13px}.ac .card table{font-size:11px}}
+
+/* Messenger directory and conversation list */
+.cp .sm-member-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cp .sm-member-row{display:flex;align-items:center;gap:10px;min-width:0;padding:9px;border:1px solid #e8eeeb;border-radius:13px;background:#fbfdfb}
+.cp .sm-member-row .avatar{flex:0 0 38px;width:38px;height:38px}
+.cp .sm-member-name{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
+.cp .sm-member-name b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp .sm-member-name small,.cp .sm-chat-row small{font-size:11px;color:#75827d}
+.cp .sm-member-row .btnc{padding:7px 12px;font-size:12px}
+.cp .sm-chat-row{display:flex;width:100%;align-items:center;gap:10px;text-align:left;cursor:pointer}
+.cp .sm-chat-row b{min-width:85px}
+.cp .sm-chat-row small{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp .sm-chat-row em{font-style:normal;background:#0b765d;color:#fff;border-radius:20px;padding:2px 7px;font-size:10px}
+@media(max-width:600px){.cp .sm-member-list{grid-template-columns:1fr}.cp .sm-member-row{padding:8px}}
