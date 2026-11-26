@@ -11,8 +11,8 @@ const {Pool}=require('pg');
  let server;
  try{
   await pool.query(fs.readFileSync(path.join(__dirname,'../schema.sql'),'utf8'));
-  const stamp=Date.now();
-  const insert=async n=>(await pool.query('INSERT INTO members(name,phone,password_hash,referral_code,coin_balance) VALUES($1,$2,$3,$4,1000) RETURNING id,name',[n,'01'+String(stamp).slice(-9)+String(n.length), 'test-hash','CI'+stamp+n.length])).rows[0];
+  const stamp=Date.now();let memberIndex=0;
+  const insert=async n=>{memberIndex++;return (await pool.query('INSERT INTO members(name,phone,password_hash,referral_code,coin_balance) VALUES($1,$2,$3,$4,1000) RETURNING id,name',[n,'01'+String(stamp).slice(-8)+String(memberIndex).padStart(2,'0'),'test-hash','CI'+stamp+memberIndex])).rows[0]};
   const one=await insert('Community Test One'),two=await insert('Community Test Two');
   const token=id=>jwt.sign({id,role:'member'},secret,{expiresIn:'10m'}),t1=token(one.id),t2=token(two.id),ta=jwt.sign({role:'admin'},secret,{expiresIn:'10m'});
   const auth=(req,res,next)=>{try{req.user=jwt.verify((req.headers.authorization||'').replace(/^Bearer\s+/i,''),secret);next()}catch{res.sendStatus(401)}};
