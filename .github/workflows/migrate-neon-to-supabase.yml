@@ -1,0 +1,36 @@
+name: One-time Neon to Supabase migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_import:
+        description: "Type YES to start the additive import (target conflicts are skipped; no target rows are deleted)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    if: ${{ inputs.confirm_import == 'YES' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out migration branch
+        uses: actions/checkout@v4
+        with:
+          ref: database-migration-tool
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install project dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Run additive migration
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.SOURCE_DATABASE_URL }}
+          TARGET_DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
+          MIGRATION_CONFIRM: YES
+          MIGRATION_BATCH_SIZE: 100
+        run: node scripts/migrate-neon-to-supabase.js
