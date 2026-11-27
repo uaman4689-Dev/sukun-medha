@@ -6,6 +6,26 @@ if(!DATABASE_URL||!JWT_SECRET||!ADMIN_PASSWORD){console.error('Set DATABASE_URL,
 const pool=new Pool({connectionString:DATABASE_URL,ssl:process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined,max:3,idleTimeoutMillis:10000,connectionTimeoutMillis:5000,allowExitOnIdle:true});
 // Neon quota exhaustion can reject background database jobs. Log those rejections without terminating the web process.
 pool.on('error',err=>console.error('Postgres pool idle-client error:',err.message));
+const publicApiCache=new Map();
+const PUBLIC_CACHE_TTL=30_000;
+const PUBLIC_CACHE_PATHS=new Set(['/api/public','/api/books','/api/public/coin-tasks','/api/plans']);
+app.use((req,res,next)=>{
+ if(req.method!=='GET'||!PUBLIC_CACHE_PATHS.has(req.path))return next();
+ const key=req.originalUrl,now=Date.now(),hit=publicApiCache.get(key);
+ if(hit&&hit.expiresAt>now){publicApiCache.delete(key);publicApiCache.set(key,hit);res.set('Cache-Control','public, max-age=30, stale-while-revalidate=60').set('X-SUKUN-Cache','HIT');return res.status(hit.status).json(hit.body);}
+ if(hit)publicApiCache.delete(key);
+ const sendJson=res.json.bind(res);
+ res.json=body=>{
+  if(res.statusCode===200){
+   publicApiCache.set(key,{body,status:res.statusCode,expiresAt:Date.now()+PUBLIC_CACHE_TTL});
+   while(publicApiCache.size>100)publicApiCache.delete(publicApiCache.keys().next().value);
+   res.set('Cache-Control','public, max-age=30, stale-while-revalidate=60').set('X-SUKUN-Cache','MISS');
+  }
+  return sendJson(body);
+ };
+ next();
+});
+
 process.on('unhandledRejection',reason=>console.error('Handled background promise rejection:',reason?.message||reason));
 app.set('trust proxy',1);app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'150mb'}));
 app.use('/api/auth',rateLimit({windowMs:900000,limit:30,standardHeaders:true,legacyHeaders:false}));
