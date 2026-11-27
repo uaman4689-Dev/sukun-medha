@@ -3,9 +3,17 @@ name: One-time Neon to Supabase migration
 on:
   workflow_dispatch:
     inputs:
-      confirm_import:
-        description: "Type YES to start the additive import (target conflicts are skipped; no target rows are deleted)"
+      mode:
+        description: "Choose preflight first; import only after preflight passes"
         required: true
+        type: choice
+        options:
+          - preflight
+          - import
+        default: preflight
+      confirm_import:
+        description: "For import only, type YES. For preflight, leave blank."
+        required: false
         type: string
 
 permissions:
@@ -13,24 +21,24 @@ permissions:
 
 jobs:
   migrate:
-    if: ${{ inputs.confirm_import == 'YES' }}
+    if: ${{ inputs.mode == 'preflight' || (inputs.mode == 'import' && inputs.confirm_import == 'YES') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Check out migration branch
+      - name: Check out main branch
         uses: actions/checkout@v4
         with:
-          ref: database-migration-tool
+          ref: main
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Install project dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Run additive migration
+      - name: Run database preflight or import
         env:
           SOURCE_DATABASE_URL: ${{ secrets.SOURCE_DATABASE_URL }}
           TARGET_DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
-          MIGRATION_CONFIRM: YES
+          MIGRATION_CONFIRM: ${{ inputs.mode == 'import' && inputs.confirm_import == 'YES' && 'YES' || 'NO' }}
           MIGRATION_BATCH_SIZE: 100
         run: node scripts/migrate-neon-to-supabase.js
