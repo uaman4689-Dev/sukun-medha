@@ -1,9 +1,9 @@
 /**
  * Additive Neon -> Supabase migration.
  *
- * Required environment variables (set privately in Render):
- *   SOURCE_DATABASE_URL = rotated Neon connection string
- *   TARGET_DATABASE_URL = Supabase Session Pooler connection string
+ * Required GitHub Actions repository secrets:
+ *   SOURCE_DATABASE_URL = rotated Neon connection string (raw URI, no quotes)
+ *   TARGET_DATABASE_URL = Supabase Session Pooler connection string (raw URI, no quotes)
  *   MIGRATION_CONFIRM = YES (required to write)
  *
  * Safety: preflight by default; never truncates, drops, or overwrites target rows.
