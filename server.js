@@ -4,6 +4,9 @@ const app=express(),PORT=process.env.PORT||10000,multer=require('multer'),pdfPar
 const {DATABASE_URL,JWT_SECRET,ADMIN_PASSWORD}=process.env;
 if(!DATABASE_URL||!JWT_SECRET||!ADMIN_PASSWORD){console.error('Set DATABASE_URL, JWT_SECRET and ADMIN_PASSWORD');process.exit(1);}
 const pool=new Pool({connectionString:DATABASE_URL,ssl:process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined,max:3,idleTimeoutMillis:10000,connectionTimeoutMillis:5000,allowExitOnIdle:true});
+// Neon quota exhaustion can reject background database jobs. Log those rejections without terminating the web process.
+pool.on('error',err=>console.error('Postgres pool idle-client error:',err.message));
+process.on('unhandledRejection',reason=>console.error('Handled background promise rejection:',reason?.message||reason));
 app.set('trust proxy',1);app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'150mb'}));
 app.use('/api/auth',rateLimit({windowMs:900000,limit:30,standardHeaders:true,legacyHeaders:false}));
 app.use('/api/admin/login',rateLimit({windowMs:900000,limit:10,standardHeaders:true,legacyHeaders:false}));
