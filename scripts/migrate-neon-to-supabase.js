@@ -1,190 +1,163 @@
 /**
- * One-time Neon -> Supabase data migration.
+ * Additive Neon -> Supabase migration.
  *
- * Required env:
+ * Required environment variables (set privately in Render):
  *   SOURCE_DATABASE_URL = rotated Neon connection string
  *   TARGET_DATABASE_URL = Supabase Session Pooler connection string
+ *   MIGRATION_CONFIRM = YES (required to write)
  *
- * Safety:
- *   Default mode is a read-only preflight.
- *   Actual migration requires MIGRATION_CONFIRM=YES.
- *   It replaces rows in matching public tables on the TARGET only.
- *   It never changes or deletes data on SOURCE.
+ * Safety: preflight by default; never truncates, drops, or overwrites target rows.
+ * Existing target conflicts are skipped. Source is only read.
  */
-const { Client } = require("pg");
+'use strict';
+const { Client } = require('pg');
 
 const sourceUrl = process.env.SOURCE_DATABASE_URL;
 const targetUrl = process.env.TARGET_DATABASE_URL;
-const doMigration = process.env.MIGRATION_CONFIRM === "YES";
+const confirmed = process.env.MIGRATION_CONFIRM === 'YES';
+const batchSize = Math.max(1, Math.min(250, Number(process.env.MIGRATION_BATCH_SIZE) || 100));
 
 if (!sourceUrl || !targetUrl) {
-  console.error("Missing SOURCE_DATABASE_URL or TARGET_DATABASE_URL.");
+  console.error('Missing SOURCE_DATABASE_URL or TARGET_DATABASE_URL.');
+  process.exit(2);
+}
+if (sourceUrl === targetUrl) {
+  console.error('Source and target URLs are identical; refusing to run.');
   process.exit(2);
 }
 
-const clientOptions = (connectionString) => ({
+const options = (connectionString) => ({
   connectionString,
   ssl: { rejectUnauthorized: false },
   connectionTimeoutMillis: 20000,
   statement_timeout: 0,
   query_timeout: 0,
 });
+const qi = (value) => '"' + String(value).replace(/"/g, '""') + '"';
+const qt = (table) => 'public.' + qi(table);
 
-const quoteIdent = (value) => '"' + String(value).replace(/"/g, '""') + "'";
-const qualified = (schema, table) => quoteIdent(schema) + "." + quoteIdent(table);
-
-async function getTables(client) {
-  const result = await client.query(`
-    SELECT table_name
-    FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+async function tables(client) {
+  const r = await client.query(`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema='public' AND table_type='BASE TABLE'
     ORDER BY table_name
   `);
-  return result.rows.map((row) => row.table_name);
+  return r.rows.map(x => x.table_name);
 }
-
-async function getColumns(client, table) {
-  const result = await client.query(
-    `
-      SELECT column_name, data_type, udt_name, is_generated, is_identity
-      FROM information_schema.columns
-      WHERE table_schema = 'public' AND table_name = $1
-      ORDER BY ordinal_position
-    `,
-    [table]
-  );
-  return result.rows;
+async function columns(client, table) {
+  const r = await client.query(`
+    SELECT column_name, data_type, udt_name, is_generated, is_identity
+    FROM information_schema.columns
+    WHERE table_schema='public' AND table_name=$1
+    ORDER BY ordinal_position
+  `, [table]);
+  return r.rows;
 }
 
 async function main() {
-  const source = new Client(clientOptions(sourceUrl));
-  const target = new Client(clientOptions(targetUrl));
-  let transactionOpen = false;
-
+  const src = new Client(options(sourceUrl));
+  const dst = new Client(options(targetUrl));
+  let roleChanged = false;
   try {
-    await source.connect();
-    await target.connect();
+    await src.connect();
+    await dst.connect();
 
-    const [sourceVersion, targetVersion] = await Promise.all([
-      source.query("SELECT current_setting('server_version') AS version"),
-      target.query("SELECT current_setting('server_version') AS version"),
+    const [srcMeta, dstMeta, srcTables, dstTables] = await Promise.all([
+      src.query('SELECT current_database() AS db, current_user AS usr'),
+      dst.query('SELECT current_database() AS db, current_user AS usr'),
+      tables(src),
+      tables(dst),
     ]);
-    console.log("Source PostgreSQL:", sourceVersion.rows[0].version);
-    console.log("Target PostgreSQL:", targetVersion.rows[0].version);
+    console.log('Source:', srcMeta.rows[0].db, '/', srcMeta.rows[0].usr);
+    console.log('Target:', dstMeta.rows[0].db, '/', dstMeta.rows[0].usr);
 
-    const [sourceTables, targetTables] = await Promise.all([
-      getTables(source),
-      getTables(target),
-    ]);
+    const dstSet = new Set(dstTables);
+    const missing = srcTables.filter(t => !dstSet.has(t));
+    if (missing.length) throw new Error('Target schema missing tables: ' + missing.join(', ') + '. No data was copied.');
 
-    const missingOnTarget = sourceTables.filter((name) => !targetTables.includes(name));
-    const extraOnTarget = targetTables.filter((name) => !sourceTables.includes(name));
+    const map = new Map();
+    for (const table of srcTables) {
+      const [sc, dc] = await Promise.all([columns(src, table), columns(dst, table)]);
+      const dmap = new Map(dc.map(c => [c.column_name, c]));
+      const missingCols = sc.filter(c => c.is_generated !== 'ALWAYS' && !dmap.has(c.column_name));
+      if (missingCols.length) throw new Error('Target public.' + table + ' missing columns: ' + missingCols.map(c => c.column_name).join(', '));
+      const selected = sc.filter(c => c.is_generated !== 'ALWAYS' && dmap.has(c.column_name));
+      map.set(table, selected.map(c => c.column_name));
+    }
 
-    if (missingOnTarget.length || extraOnTarget.length) {
-      console.error("Table mismatch. No target data was changed.");
-      if (missingOnTarget.length) console.error("Missing on target:", missingOnTarget.join(", "));
-      if (extraOnTarget.length) console.error("Extra on target:", extraOnTarget.join(", "));
-      process.exitCode = 3;
+    console.log('Preflight passed:', srcTables.length, 'matching public tables.');
+    if (!confirmed) {
+      console.log('DRY RUN ONLY. Target database was not changed. Set MIGRATION_CONFIRM=YES to start additive import.');
       return;
     }
 
-    const tableColumns = new Map();
-    for (const table of sourceTables) {
-      const [sourceCols, targetCols] = await Promise.all([
-        getColumns(source, table),
-        getColumns(target, table),
-      ]);
-      const shape = (cols) => cols.map((c) =>
-        [c.column_name, c.data_type, c.udt_name, c.is_generated, c.is_identity].join("|")
-      );
-      if (JSON.stringify(shape(sourceCols)) !== JSON.stringify(shape(targetCols))) {
-        console.error(`Column mismatch in public.${table}. No target data was changed.`);
-        process.exitCode = 4;
-        return;
-      }
-      tableColumns.set(table, sourceCols.filter((c) => c.is_generated === "NEVER"));
-    }
+    // Requires the Supabase postgres role. It disables FK triggers only for this
+    // dedicated connection and is restored in finally; constraints remain intact.
+    await dst.query('SET session_replication_role = replica');
+    roleChanged = true;
 
-    console.log(`Preflight passed: ${sourceTables.length} matching public tables.`);
-    console.log("Target data has NOT been changed.");
+    let total = 0;
+    for (const table of srcTables) {
+      const cols = map.get(table);
+      if (!cols.length) continue;
+      const colSql = cols.map(qi).join(', ');
+      let offset = 0;
+      let imported = 0;
 
-    if (!doMigration) {
-      console.log("DRY RUN ONLY. To perform the one-time import, set MIGRATION_CONFIRM=YES.");
-      return;
-    }
+      while (true) {
+        const page = await src.query(
+          'SELECT ' + colSql + ' FROM ' + qt(table) + ' LIMIT $1 OFFSET $2',
+          [batchSize, offset]
+        );
+        if (!page.rows.length) break;
 
-    if (sourceTables.length === 0) {
-      console.log("No public tables found; nothing to migrate.");
-      return;
-    }
-
-    await target.query("BEGIN");
-    transactionOpen = true;
-    await target.query("SET LOCAL session_replication_role = replica");
-
-    const tableList = sourceTables.map((t) => qualified("public", t)).join(", ");
-    await target.query(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`);
-
-    let totalRows = 0;
-    for (const table of sourceTables) {
-      const columns = tableColumns.get(table);
-      if (!columns.length) continue;
-
-      const columnNames = columns.map((c) => c.column_name);
-      const selectSql = `SELECT ${columnNames.map(quoteIdent).join(", ")} FROM ${qualified("public", table)}`;
-      const sourceRows = await source.query(selectSql);
-      const batchSize = Math.max(1, Math.min(250, Math.floor(60000 / columnNames.length)));
-
-      for (let offset = 0; offset < sourceRows.rows.length; offset += batchSize) {
-        const batch = sourceRows.rows.slice(offset, offset + batchSize);
         const values = [];
-        const tuples = batch.map((row, rowIndex) => {
-          const placeholders = columnNames.map((column, colIndex) => {
-            values.push(row[column]);
-            return `$${rowIndex * columnNames.length + colIndex + 1}`;
-          });
-          return "(" + placeholders.join(", ") + ")";
-        });
-        const insertSql = `INSERT INTO ${qualified("public", table)} (${columnNames.map(quoteIdent).join(", ")}) VALUES ${tuples.join(", ")}`;
-        await target.query(insertSql, values);
+        const tuples = page.rows.map(row => '(' + cols.map(col => {
+          values.push(row[col]);
+          return '$' + values.length;
+        }).join(', ') + ')');
+
+        await dst.query(
+          'INSERT INTO ' + qt(table) + ' (' + colSql + ') OVERRIDING SYSTEM VALUE VALUES ' +
+          tuples.join(', ') + ' ON CONFLICT DO NOTHING',
+          values
+        );
+        imported += page.rows.length;
+        offset += page.rows.length;
+        if (page.rows.length < batchSize) break;
       }
 
-      totalRows += sourceRows.rows.length;
-      console.log(`Imported public.${table}: ${sourceRows.rows.length} rows`);
-
-      for (const column of columns) {
-        const sequence = await target.query(
-          "SELECT pg_get_serial_sequence($1, $2) AS sequence_name",
-          [`public.${table}`, column.column_name]
+      // Move serial/identity sequences forward without changing table contents.
+      for (const col of cols) {
+        const seq = await dst.query(
+          'SELECT pg_get_serial_sequence($1, $2) AS name',
+          ['public.' + table, col]
         );
-        const sequenceName = sequence.rows[0]?.sequence_name;
-        if (!sequenceName) continue;
-        const maxResult = await target.query(
-          `SELECT MAX(${quoteIdent(column.column_name)}) AS max_value, COUNT(*) > 0 AS has_rows FROM ${qualified("public", table)}`
-        );
-        const maxValue = maxResult.rows[0].max_value;
-        const hasRows = maxResult.rows[0].has_rows;
-        await target.query(
-          "SELECT setval($1::regclass, $2::bigint, $3::boolean)",
-          [sequenceName, maxValue || 1, hasRows]
-        );
+        const seqName = seq.rows[0] && seq.rows[0].name;
+        if (!seqName) continue;
+        const max = await dst.query('SELECT MAX(' + qi(col) + ') AS v FROM ' + qt(table));
+        if (max.rows[0].v !== null) {
+          await dst.query('SELECT setval($1::regclass, $2, true)', [seqName, max.rows[0].v]);
+        }
       }
+
+      total += imported;
+      console.log('Processed', table + ':', imported, 'source rows (target conflicts skipped)');
     }
 
-    await target.query("COMMIT");
-    transactionOpen = false;
-    console.log(`Migration committed successfully. Total rows imported: ${totalRows}`);
-  } catch (error) {
-    if (transactionOpen) {
-      try { await target.query("ROLLBACK"); } catch (_) {}
-    }
-    console.error("Migration failed. Target transaction was rolled back when possible.");
-    console.error(error.message || String(error));
-    process.exitCode = 1;
+    console.log('Additive migration completed. Source rows processed:', total);
+    console.log('No target rows were deleted or overwritten.');
   } finally {
-    try { await source.end(); } catch (_) {}
-    try { await target.end(); } catch (_) {}
+    if (roleChanged) {
+      try { await dst.query('SET session_replication_role = origin'); } catch (e) {
+        console.error('Warning: could not restore session_replication_role:', e.message);
+      }
+    }
+    await Promise.allSettled([src.end(), dst.end()]);
   }
 }
 
-main();
+main().catch(error => {
+  console.error('Migration stopped:', error.message || error);
+  process.exitCode = 1;
+});
