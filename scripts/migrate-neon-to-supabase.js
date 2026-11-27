@@ -26,6 +26,20 @@ if (sourceUrl === targetUrl) {
   process.exit(2);
 }
 
+function safeHost(label, value) {
+  try {
+    const u = new URL(value);
+    console.log(label + ' host:', u.hostname || '(missing)');
+    if (!u.hostname || u.hostname === 'base' || u.hostname.includes('[') || u.hostname.includes(']')) {
+      throw new Error(label + ' connection URL has an invalid hostname.');
+    }
+  } catch (error) {
+    throw new Error(label + ' connection URL is invalid. Check that the GitHub Secret contains the full PostgreSQL URI (postgresql://...) without quotes or placeholder text. ' + error.message);
+  }
+}
+safeHost('SOURCE_DATABASE_URL', sourceUrl);
+safeHost('TARGET_DATABASE_URL', targetUrl);
+
 const options = (connectionString) => ({
   connectionString,
   ssl: { rejectUnauthorized: false },
